@@ -24,17 +24,17 @@ github for group 8 of the fullstack group project
 
 # Communication  
 
-**Q3a:** How can your group communicate when doing the Full Stack Group Project?  
-**Q3b:** What are the usernames of each group member on that platform?  
-**Q3c:** What is your group’s expected response time to messages?  
+**Q3a:** How can your group communicate when doing the Full Stack Group Project? 
 
-**Example:**  
-*We will use Discord for communication*  
+*We will use SnapChat for communication*  
+
+**Q3b:** What are the usernames of each group member on that platform?  
 
 *Usernames:*  
-*Justin - ghostmechanic*  
-*Claudia - ninth.py*  
-*Mauricio - itsperi*  
+*Oday - odaysuleiman14*  
+
+**Q3c:** What is your group’s expected response time to messages?  
+
 *Our expected response time will be within 12 hours.*  
 
 ---
@@ -42,12 +42,13 @@ github for group 8 of the fullstack group project
 # Norms  
 
 **Q4a:** How will your group handle situations when there is conflict in your group?  
+
+If there is a personal conflict, we will focus on the success of the project and not let it affect the workflow. If the conflict is proffesional, we will have a discussion about to convince the other about our side, and if that isn't enough we vote for it
+
 **Q4b:** How will your group handle situations when a member is not contributing enough?  
 
-**Example:**  
-*If there is a disagreement on direction, we will resolve it with a unanimous vote.*  
-*If team members do not pull their weight, the team will politely remind them of their duties.*  
-*If they continue to not pull their weight, then they will get another warning and a chance to start being more productive.*  
+First, we will remind them of the work. A few chances will be given to each member, and those who don't pull their weight will be expected to make up for it later, or at least not repeat that same mistake. If a member is completely ghosting the team or not listeing to warnings, we will mention it to the professor(for a paper trail) and cook them in the group evaluation 
+ 
 
 ---
 
@@ -55,8 +56,8 @@ github for group 8 of the fullstack group project
 
 **Q5:** How will your group divide your role in the Group Project?  
 
-**Example:**  
-*Mauricio - Backend, Justin - Project Lead, Claudia - Frontend.*  
+*Oday - Backend.*  
+
 
 ---
 
