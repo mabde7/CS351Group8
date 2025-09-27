@@ -1,4 +1,6 @@
-<<<<<<< HEAD
+# CS351Group8
+
+github for group 8 of the fullstack group project
 # Logistics  
 
 **Q1:** At what time in the week would your group be available to meet online?  
@@ -123,8 +125,3 @@
 **Q7: Where will you deploy your project (e.g., Heroku, AWS, Render)? How will you manage environment variables and secrets during deployment?**
 
 **Q8: How will you ensure your deployment is reliable and easy to update?**
-=======
-# CS351Group8
-
-github for group 8 of the fullstack group project
->>>>>>> 43a8fa1456766caf56e9f130ce71311bdc18f5dd
