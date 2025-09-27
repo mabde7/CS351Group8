@@ -1,22 +1,17 @@
 # Logistics  
 
 **Q1:** At what time in the week would your group be available to meet online?  
-**Example:**  
-*We are available to meet online on weekends from 12pm-8pm (12-2pm Saturday + Sunday), as well as from 4pm-6pm on Fridays.*  
-*Our weekly meeting will be Thursday 11am-12pm.*  
+**Answer:**  
+*We are usually able to meet online Monday before noon, with the ability to move it around when needed to Wednesday. Of course it depends on the day and person specifically, but that is a good estimate of what days we are available and plan on meeting*
 
 ---
 
 # Timeline: Weekly Meeting Goals  
 
 **Q2:** What is your goals that your group want to achieve in each weekly meeting?  
-**Example:**  
-*Prior to 3/13: Weekly Meeting we will plan out some preliminary info/idea for the project itself ahead of the scheduled meeting like which data source/API and data structures we will use in our backend. We will browse [the given list of public APIs for inspiration](https://github.com/public-apis/public-apis).*  
 
-*During week of 3/25: Work on the project rough draft itself to make a functioning project with data input, data structure usage, and processing into output on the frontend.*  
-
-*Prior to 4/17: Meet together weekly to target project weakpoints/bugs and possibly visit office hours to get guidance if the progress feels weak.*  
-
+**Answer:**  
+*During each weekly meeting, our hope is to talk about what we have done, what is needed and when it is needed to be done by. For example, these last 2 weeks, we met and discussed how to divide everything, when we would like to have it done by, and when it is actually due, that way we could have cushion and time to talk*
 ---
 
 # Communication  
@@ -25,14 +20,18 @@
 **Q3b:** What are the usernames of each group member on that platform?  
 **Q3c:** What is your group’s expected response time to messages?  
 
-**Example:**  
-*We will use Discord for communication*  
+**Answer:**  
 
-*Usernames:*  
-*Justin - ghostmechanic*  
-*Claudia - ninth.py*  
-*Mauricio - itsperi*  
-*Our expected response time will be within 12 hours.*  
+*Our group communication is through snapchat, we have a groupchat and also are able to call through there if it is ever needed 
+
+Our Names are
+
+Mo Abdelmajid - supermo2002
+Bryan Dominguez - b.dominguez10
+IanCarlo Trejo - iancarlo2003
+Oday Suleiman - odaysuleiman14
+
+We usually try to respond within 4 hours, everyone's schedule is different so we recognize there is always a chance for delays, but 1 person usually responds 
 
 ---
 
@@ -52,8 +51,9 @@
 
 **Q5:** How will your group divide your role in the Group Project?  
 
-**Example:**  
-*Mauricio - Backend, Justin - Project Lead, Claudia - Frontend.*  
+**Answer:**  
+
+Mo Abdelmajid: Project Lead
 
 ---
 
