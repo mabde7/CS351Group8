@@ -71,8 +71,11 @@ IanCarlo Trejo, Bryan Dominguez - frontend
 
 # Track 1: Tackling Generative AI Consequences
 **Problem 1:** 
+*Certain AI tools have shown bias when it comes to salary with men and women, if you compare the 2 and give them the exact same resume, the AI will favor the man and say their salary should be higher, even though they are the same in their experience 
+
 
 **Solution 1:** 
+*Develop an app that removes the bias out of it, instead focus in on the persons experience and resume, rather than the gender. Also have a feature that tests for the bias
 
 ---
 
