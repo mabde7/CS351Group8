@@ -114,24 +114,35 @@ The database will be PostgreSQL. The reason is because we need a cloud-based dat
 **Q2: How will database be helpful to your project? How will you design your database to support your application features?**
 
 Since theres a sign-in part of the app, the database will be used to record user data(username,email,password,bookmarks,etc).
-There will 
+The database will support all "user" features, by storing the ID# of bookmarks, created posts, amount of followers, etc
 
 ## Third-Party API Integration
 
 **Q3: Which third-party API(s) will you integrate into your project? What data will you pull from the API(s), and how will you use it in your application?**
 
-IPStack, Auth0(or a similar authentication API), and some continuos deployment API like BitRise. IPStack will be used to check the location of the user and recomend university pages for them to check out. 
+IPStack and Auth0(or a similar authentication API) will be used. IPStack will be used to check the location of the user and recomend university pages for them to check out, while Auth0 will be used to manage log-ins
 
 **Q4: Does your API key has limitations such as rate limits or downtime? How are you going to deal with that?**
+
+IPStack has a limit of 100 requests/month for the free plan. Auth0 is alot more generous with 7000 active monthly users and 50 requests/second for the free plan. The limit for Auth0 is inconsequential, the free plan is sufficient for this app. If it isn't, we can add some donation link on the app(like Wikipedia) and attempt a paid plan. For IPStack, we limit the calls to it by storing the last IP Address and list of nearby universities for the user in the database. The IPStack API call will only happen if the current IP Address is different from the one stored in the database and a specific button is pressed. This will minimize the number of IPStack API calls. If that isn't enough, we can lock the IPStack API behind some kind of premium membership or internal point system based on app usage, so only those we know use the app often can enjoy that feature. Also, we could allow others to use their own API keys for them
 
 ## Authentication and Security
 
 **Q5: What authentication method will you use (e.g., username/password, OAuth, JWT)?**
 
+The authentication method will be username/password, along with Auth0 authentication to sign-in with the restriction of only allowing school accounts
+
 **Q6: How will you store and protect sensitive user data (e.g., passwords, tokens)?**
+
+The passwords will be managed entirely by Auth0, so those will be secure. The only user sensitive data used will be email accounts, which will not be stored locally and will secured in the database with PostGreSQL's database encryption.
 
 ## Deployment
 
 **Q7: Where will you deploy your project (e.g., Heroku, AWS, Render)? How will you manage environment variables and secrets during deployment?**
 
+We will be using Render(pointing to our github repo). For the environmental variables and secrets during deployment, we will be using local .env files and loading those files using os.getenv in Flask.
+
 **Q8: How will you ensure your deployment is reliable and easy to update?**
+
+For reliability, we will lock python versions, keep logs, and enable automatic Database backups. 
+For easy updates, we will enable automatic deploy on merge(we develop updates on a sub-branch and merge when finished) and enable one-click rollback(which is supported on Render). Also, perform CI sanity checks by running pytest/flake8 on PRs, so it only merges green builds.
