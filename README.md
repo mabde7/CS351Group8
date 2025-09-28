@@ -40,10 +40,10 @@ We usually try to respond within 4 hours, everyone's schedule is different so we
 **Q4a:** How will your group handle situations when there is conflict in your group?  
 **Q4b:** How will your group handle situations when a member is not contributing enough?  
 
-**Example:**  
-*If there is a disagreement on direction, we will resolve it with a unanimous vote.*  
-*If team members do not pull their weight, the team will politely remind them of their duties.*  
-*If they continue to not pull their weight, then they will get another warning and a chance to start being more productive.*  
+**Answer:** 
+If we ever disagree, we will have a healhty discussion on what is wrong, then hopefully resolve it with those discussions, with worst case go to a vote 
+
+We will let them know how we feel, and give them one last chance to try and get them to work, before taking it to the TA and the professor 
 
 ---
 
@@ -52,14 +52,18 @@ We usually try to respond within 4 hours, everyone's schedule is different so we
 **Q5:** How will your group divide your role in the Group Project?  
 
 **Answer:**  
-
-Mo Abdelmajid: Project Lead
+Mo Abdelmajid - Project Lead
+Oday Suleiman - backend 
+IanCarlo Trejo, Bryan Dominguez - frontend 
 
 ---
 
 # Tech Stacks
 
 **Q6:** Which tech stacks will your group use? (Django + React or Flask + React)
+
+**Answer:**  
+*Flask + React*
 
 ---
 # Full Stack Group Project Track  
