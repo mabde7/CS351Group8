@@ -102,7 +102,7 @@ If there is a personal conflict, we will focus on the success of the project and
 
 **Idea - Story - Inspiration 5: I come from Mexico and I have always been curious about the other latin american countries that are nearby  and have always wondered about the other latin american coultures that surround me and their history**
 
-**Implementation 5:An implementation for this and interactive map that has nodes that allow traversal into different cultures and give a description/history on the country and shows the most common food and gives a recipe. It can also show visuals of different cultures and how they changed over time. This app aims to provide an educational experience for users.**
+**Implementation 5: An implementation for this and interactive map that has nodes that allow traversal into different cultures and give a description/history on the country and shows the most common food and gives a recipe. It can also show visuals of different cultures and how they changed over time. This app aims to provide an educational experience for users.**
 
 
 # Idea Finalization
