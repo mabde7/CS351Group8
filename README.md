@@ -90,6 +90,7 @@ If there is a personal conflict, we will focus on the success of the project and
 
 **Problem 3:** 
 *In local neighborhoods, many neighborhood councils organize and try promoting events that are meant to help those living there. However, many residents don't attend these events or take advantage of the benefits that are being given for free due to safety risks or not knowing where to find this information. This causes neighborhood councils to lose funding since it shows that no one attends, so there shouldn't money being allocated to these events.*
+
 **Solution 3:**  
 *By having a neighborhood council social media/web app where the organization can post upcoming events and photos of past events could help residents come to these events. There could be a section in the website that allows residents to RSVP for events, since these organizations need to provide data of how many people come to these events, so by having a page where residents can select events and RSVP to them, it'll allow for them to collect data. Another thing the web app could have could be a section where other residents can report any safety issues around the neighborhood. This will make it so that any residents who have safety concerns could see these warning and not be put into any danger.This web app not only can be used to connect the neighborhood through events but also keep residents safe when navigating around the area.*
 # Track 3: Creative Coding and Cultural Expression
