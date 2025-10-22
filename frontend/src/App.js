@@ -4,6 +4,7 @@ import LoginPage from './pages/login';
 import TopicPage from './pages/topic';
 import React, { useEffect, useState } from 'react';
 import MainMenu from './pages/mainmenu';
+import TopicBrowse from './pages/topicPage';
 
 // Tiny client-side router using the History API so we don't need react-router-dom.
 function Router() {
@@ -17,6 +18,7 @@ function Router() {
 
   if (path === '/login') return <LoginPage />;
   if (path === '/mainmenu' || path === '/main') return <MainMenu />;
+  if (path === '/topicPage') return <TopicBrowse />;
   if (path.startsWith("/topic/")) {
     const tag = decodeURIComponent(path.replace("/topic/", ""));
     return <TopicPage topic={tag} />;

@@ -48,45 +48,37 @@ export default function HomePage() {
     navigate('/mainmenu');
   };
 
-  // shared button style + disabled style
+  // button style
   const btn = {
-    padding: '0.5rem 1rem',
-    borderRadius: '6px',
+    padding: '0.9rem 1.5rem',
+    borderRadius: '10px',
     border: 'none',
     cursor: 'pointer',
+    fontSize: '1.1rem',
+    fontWeight: 600,
+    background: '#ffffff',
+    color: '#001f62',
+    boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
   };
   const disabledStyle = isAuthenticated ? { opacity: 0.6, cursor: 'not-allowed' } : {};
 
   return (
-    <main style={{ minHeight: '100vh', padding: '2rem', color: '#fff' }}>
-      <nav
-        id="banner"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          color: '#fff',
-          padding: '0.5rem 1rem',
-          borderRadius: '8px',
-          marginBottom: '1rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <img src="/UICBanner.svg" alt="UIC Banner" style={{ height: '100px', marginRight: '1rem' }} />
-          <h2 style={{ margin: 0, fontSize: '3rem', textAlign: 'center', width: '100%' }}>
-            Welcome to the UIC Wiki Page
-          </h2>
-        </div>
-      </nav>
+    <main style={{ minHeight: '100vh', padding: '2rem', color: '#fff', display: 'flex', flexDirection: 'column' }}>
+      {/* Header (centered title) */}
+      <header style={{ textAlign: 'center', marginTop: '2rem' }}>
+        <h1 style={{ margin: 0, fontSize: '3rem', lineHeight: 1.2 }}>Welcome to the UIC Wiki Page</h1>
+        <p style={{ opacity: 0.9, marginTop: '0.5rem' }}>Find and share knowledge across UIC topics.</p>
+      </header>
 
       {/* Top row: Login/Logout + Signup */}
       <div
         style={{
           display: 'flex',
-          gap: '5rem',
-          marginTop: '10rem',
+          gap: '2rem',
+          marginTop: '4rem',
           justifyContent: 'center',
           alignItems: 'center',
+          flexWrap: 'wrap',
         }}
       >
         {isAuthenticated ? (
@@ -109,33 +101,50 @@ export default function HomePage() {
         </button>
       </div>
 
-      {/* Bottom area */}
+      {/* Bottom area: Guest or Main Menu */}
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.5rem',
-          marginTop: '5rem',
+          gap: '0.75rem',
+          marginTop: '3rem',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-         {isAuthenticated ? (
-          <button style={btn} onClick={navigate('/mainmenu')}>
+        {isAuthenticated ? (
+          <button style={btn} onClick={() => navigate('/mainmenu')}>
             Main Menu
           </button>
         ) : (
           <button style={btn} onClick={continueAsGuest}>
-            Guest
+            Continue as Guest
           </button>
         )}
       </div>
 
       {isAuthenticated && (
-        <div style={{ marginTop: '3rem', textAlign: 'center' }}>
-          <p>Welcome back, {(user?.nickname || user?.email?.split('@')[0] || 'User')}!</p>
+        <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+          <p>Welcome back, {user?.nickname || user?.email?.split('@')[0] || 'User'}!</p>
         </div>
       )}
+
+       {/*Footer banner pinned to bottom*/}
+      <footer
+        style={{
+          marginTop: 'auto',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingTop: '2rem',
+        }}
+      >
+        <img
+          src="/UICBanner.svg"
+          alt="UIC Banner"
+          style={{ height: '160px', maxWidth: '95%', width: 'auto', objectFit: 'contain' }}
+        />
+      </footer>
     </main>
   );
 }

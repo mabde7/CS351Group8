@@ -74,7 +74,6 @@ export default function MainMenu() {
           gap: "1rem",
         }}
       >
-        <img src="/UICBanner.svg" alt="UIC Banner" style={{ height: "100px" }} />
         <h2 style={{ margin: 0, fontSize: "3rem", lineHeight: 1, textAlign: "center" }}>Main menu</h2>
       </nav>
 
@@ -126,7 +125,7 @@ export default function MainMenu() {
 
       {/* Bottom-left: Browse topics */}
       <button
-        onClick={() => navigate("/topics")}
+        onClick={() => navigate("/topicPage")}
         style={{
           position: "fixed", left: "1rem", bottom: "1rem",
           padding: "0.5rem 0.8rem", borderRadius: "6px", border: "none", cursor: "pointer"
@@ -156,6 +155,25 @@ export default function MainMenu() {
           </button>
         )}
       </div>
+
+      {/* Footer banner pinned to bottom (consistent with other pages) */}
+      <footer
+        style={{
+          marginTop: 'auto',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingTop: '1.5rem',
+          width: '100%',
+          position: 'fixed',
+          left: 0,
+          bottom: 0,
+          zIndex: 10,
+          background: 'linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,0.06))'
+        }}
+      >
+        <img src="/UICBanner.svg" alt="UIC Banner" style={{ height: '120px', maxWidth: '95%', width: 'auto', objectFit: 'contain' }} />
+      </footer>
     </main>
   );
 }
