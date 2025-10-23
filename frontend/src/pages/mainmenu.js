@@ -1,13 +1,31 @@
+// frontend/src/pages/mainmenu.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
+import { getOrCreateUserKey } from "../utils/userKey"; // adjust path if needed
+
+const API_BASE = "http://localhost:5000"; // change if your backend differs
 
 export default function MainMenu() {
   const { isAuthenticated, user, loginWithRedirect, logout, getIdTokenClaims } = useAuth0();
-  const [handle, setHandle] = useState(null);
 
-  // guest flag
-  const isGuest = useMemo(() => !isAuthenticated && localStorage.getItem("guest") === "true", [isAuthenticated]);
-  useEffect(() => { if (isAuthenticated) localStorage.removeItem("guest"); }, [isAuthenticated]);
+  // --- UI state ---
+  const [handle, setHandle] = useState(null);
+  const [recent, setRecent] = useState([]); // strings, most-recent-first
+  const [userKey, setUserKey] = useState(null);
+
+  // Compute a stable per-user key (Auth0 sub or guest:<uuid>)
+  useEffect(() => {
+    setUserKey(getOrCreateUserKey(isAuthenticated, user));
+  }, [isAuthenticated, user]);
+
+  // Guest flag used for banner only (navigation now allowed; Router will record)
+  const isGuestBanner = useMemo(
+    () => !isAuthenticated && localStorage.getItem("guest") === "true",
+    [isAuthenticated]
+  );
+  useEffect(() => {
+    if (isAuthenticated) localStorage.removeItem("guest");
+  }, [isAuthenticated]);
 
   // History helper
   const navigate = (to) => {
@@ -16,35 +34,53 @@ export default function MainMenu() {
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
-  // get handle from ID token (fallbacks for safety)
+  // Resolve a friendly handle (best-effort)
   useEffect(() => {
     (async () => {
       try {
         const c = await getIdTokenClaims();
         setHandle(
           c?.["https://uic.wiki/handle"] ||
-          user?.username || user?.nickname || user?.email?.split("@")[0] || "User"
+            user?.username ||
+            user?.nickname ||
+            user?.email?.split("@")[0] ||
+            "User"
         );
       } catch {
-        setHandle(user?.username || user?.nickname || user?.email?.split("@")[0] || "User");
+        setHandle(
+          user?.username || user?.nickname || user?.email?.split("@")[0] || "User"
+        );
       }
     })();
   }, [getIdTokenClaims, user]);
 
-  // send logged-in users to a topic scene (restricted)
-  const goToTopic = (tag) => navigate(`/topic/${encodeURIComponent(tag)}`);
-  const handleRestrictedAction = (tag) => {
-    if (isGuest) {
-      alert("You must log in to access this feature.");
-      return;
+  // --- Recent topics (display only; Router handles recording) ---
+  const fetchRecent = async (ukey) => {
+    if (!ukey) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/recent-topics?user=${encodeURIComponent(ukey)}`);
+      const data = await res.json();
+      if (data?.ok) setRecent(Array.isArray(data.topics) ? data.topics : []);
+    } catch {
+      // swallow errors; show starter list instead
     }
-    if (!isAuthenticated) {
-      loginWithRedirect({ appState: { returnTo: "/mainmenu" } });
-      return;
-    }
-    goToTopic(tag);
   };
 
+  // Load on mount & when userKey changes
+  useEffect(() => {
+    fetchRecent(userKey);
+  }, [userKey]);
+
+  // Refresh when tab becomes visible again (e.g., after visiting a topic page)
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === "visible") fetchRecent(userKey);
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [userKey]);
+
+  // Page theming (as you had)
   useEffect(() => {
     document.body.style.margin = "0";
     document.body.style.background = "#001f62";
@@ -57,16 +93,27 @@ export default function MainMenu() {
     };
   }, []);
 
-  const btn = { padding: "0.75rem 1.25rem", borderRadius: "6px", border: "none", cursor: "pointer", width: "220px" };
+  // Styling
+  const btn = {
+    padding: "0.75rem 1.25rem",
+    borderRadius: "6px",
+    border: "none",
+    cursor: "pointer",
+    width: "220px",
+  };
+
+  // If no recents yet, show your starter list
+  const starter = ["General", "CS", "Math", "English", "Biology"];
+  const topicsToShow = recent.length ? recent : starter;
 
   return (
-    <main style={{ minHeight: "100vh", padding: "2rem", color: "#fff", position: "relative" }}>
+    <main style={{ minHeight: "100vh", padding: "2rem", color: "#fff", position: "relative",paddingBottom: "160px" }}>
       <nav
         id="banner"
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "center", // keep title centered
+          justifyContent: "center",
           color: "#fff",
           padding: "0.5rem 1rem",
           borderRadius: "8px",
@@ -74,11 +121,12 @@ export default function MainMenu() {
           gap: "1rem",
         }}
       >
-        <h2 style={{ margin: 0, fontSize: "3rem", lineHeight: 1, textAlign: "center" }}>Main menu</h2>
+        <h2 style={{ margin: 0, fontSize: "3rem", lineHeight: 1, textAlign: "center" }}>
+          Main menu
+        </h2>
       </nav>
 
-      {/* Guest notice */}
-      {isGuest && (
+      {isGuestBanner && (
         <div
           style={{
             backgroundColor: "#fffae5",
@@ -90,7 +138,13 @@ export default function MainMenu() {
         >
           You are browsing as <strong>Guest</strong>. Some actions are restricted.
           <button
-            style={{ marginLeft: "1rem", padding: "0.25rem 0.5rem", border: "none", borderRadius: "4px", cursor: "pointer" }}
+            style={{
+              marginLeft: "1rem",
+              padding: "0.25rem 0.5rem",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
             onClick={() => loginWithRedirect({ appState: { returnTo: "/mainmenu" } })}
           >
             Log in
@@ -98,7 +152,9 @@ export default function MainMenu() {
         </div>
       )}
 
-      <p style={{ margin: 0, fontSize: "3rem", opacity: 0.9, textAlign: "center" }}>Recent searches</p>
+      <p style={{ margin: 0, fontSize: "3rem", opacity: 0.9, textAlign: "center" }}>
+        {recent.length ? "Recent searches" : "Try a topic"}
+      </p>
 
       <div
         style={{
@@ -110,32 +166,46 @@ export default function MainMenu() {
           justifyContent: "center",
         }}
       >
-        {["General", "CS", "Math", "English", "Biology"].map((course) => (
+        {topicsToShow.map((topic) => (
           <button
-            key={course}
-            style={{ ...btn, opacity: isGuest ? 0.7 : 1 }}
-            disabled={isGuest}
-            onClick={() => handleRestrictedAction(course)}
-            title={isGuest ? "Login required" : `Open ${course}`}
+            key={topic}
+            style={{ ...btn, opacity: 1 }}
+            onClick={() => navigate(`/topic/${encodeURIComponent(topic)}`)} // Router will record
+            title={`Open ${topic}`}
           >
-            {course}
+            {topic}
           </button>
         ))}
       </div>
 
-      {/* Bottom-left: Browse topics */}
+      {/* Bottom-left: Browse topics (kept clickable via zIndex) */}
       <button
         onClick={() => navigate("/topicPage")}
         style={{
-          position: "fixed", left: "1rem", bottom: "1rem",
-          padding: "0.5rem 0.8rem", borderRadius: "6px", border: "none", cursor: "pointer"
+          position: "fixed",
+          left: "1rem",
+          bottom: "1rem",
+          padding: "0.5rem 0.8rem",
+          borderRadius: "6px",
+          border: "none",
+          cursor: "pointer",
+          zIndex: 20, // ensure above footer
         }}
       >
         Browse topics
       </button>
 
-      {/* Bottom-right: welcome + logout (handle-based) */}
-      <div style={{ position: "fixed", right: "1rem", bottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+      {/* Bottom-right: welcome + logout */}
+      <div
+        style={{
+          position: "fixed",
+          right: "1rem",
+          bottom: "1rem",
+          display: "flex",
+          alignItems: "center",
+          gap: "0.5rem",
+        }}
+      >
         {isAuthenticated ? (
           <>
             <span style={{ opacity: 0.9 }}>Welcome, {handle}.</span>
@@ -156,23 +226,28 @@ export default function MainMenu() {
         )}
       </div>
 
-      {/* Footer banner pinned to bottom (consistent with other pages) */}
+      {/* Footer */}
       <footer
         style={{
-          marginTop: 'auto',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          paddingTop: '1.5rem',
-          width: '100%',
-          position: 'fixed',
+          marginTop: "auto",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          paddingTop: "1.5rem",
+          width: "100%",
+          position: "fixed",
           left: 0,
           bottom: 0,
           zIndex: 10,
-          background: 'linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,0.06))'
+          pointerEvents: "none" , //makes it so whats underneath it can be clicked in-case its blocking it
+          background: "linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,0.06))",
         }}
       >
-        <img src="/UICBanner.svg" alt="UIC Banner" style={{ height: '120px', maxWidth: '95%', width: 'auto', objectFit: 'contain' }} />
+        <img
+          src="/UICBanner.svg"
+          alt="UIC Banner"
+          style={{ height: "120px", maxWidth: "95%", width: "auto", objectFit: "contain" }}
+        />
       </footer>
     </main>
   );
