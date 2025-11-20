@@ -8,6 +8,7 @@ import LoginPage from './pages/login';
 import TopicPage from './pages/topic';
 import MainMenu from './pages/mainmenu';
 import TopicBrowse from './pages/topicPage'; // your "Browse topics" page
+import UserPage from './pages/userpage';
 import { getOrCreateUserKey } from './utils/userKey';
 
 const API_BASE = "http://localhost:5000"; // adjust if needed
@@ -64,6 +65,12 @@ function Router() {
   if (path === '/login') return <LoginPage />;
   if (path === '/mainmenu' || path === '/main') return <MainMenu />;
   if (path === '/topicPage') return <TopicBrowse />;
+  if (path === '/userpage') return <UserPage />;
+
+  if (path.startsWith('/user/')) {
+    const username = decodeURIComponent(path.replace('/user/', ''));
+    return <UserPage topic={username} />;
+  }
 
   if (path.startsWith('/topic/')) {
     const tag = decodeURIComponent(path.replace('/topic/', ''));
