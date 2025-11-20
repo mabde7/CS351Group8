@@ -1,12 +1,14 @@
 import sqlite3
 from flask import g
+import os
 
 DATABASE = "database.db"
 
 def get_db():
     if "db" not in g:
+        print(">>> USING DB FILE:", os.path.abspath(DATABASE))
         g.db = sqlite3.connect(DATABASE)
-        g.db.row_factory = sqlite3.Row
+        g.db.row_factory = sqlite3.Row        
     return g.db
 
 def close_db(e=None):

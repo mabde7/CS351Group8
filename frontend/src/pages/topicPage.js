@@ -1,4 +1,3 @@
-// filepath: /Users/iancarlotrejo/IdeaProjects/CS351Group83/frontend/src/pages/topicPage.js
 import React, { useEffect } from 'react';
 
 export default function TopicBrowse() {

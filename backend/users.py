@@ -7,37 +7,56 @@ users_bp = Blueprint("users", __name__)
 @users_bp.post("/register")
 @requires_auth
 def register_user():
-    """Register or update user info from Auth0 login."""
+    """DEPRECATED — Kept for compatibility. Use /api/me instead."""
+    return auto_register_user()
+
+def auto_register_user():
+    """
+    Ensures the current Auth0 user exists in the database.
+    Creates the user if missing.
+    Returns the full user row.
+    """
     user = current_user()
     sub = user.get("sub")
     handle = user.get(HANDLE_CLAIM)
     email = user.get("email")
 
     db = get_db()
-    existing = db.execute("SELECT sub FROM users WHERE sub = ?", (sub,)).fetchone()
-    if not existing:
-        db.execute(
-            "INSERT INTO users (sub, handle, email) VALUES (?, ?, ?)",
-            (sub, handle, email)
-        )
+    row = db.execute("SELECT * FROM users WHERE sub = ?", (sub,)).fetchone()
+
+    if row is None:
+        # Create new user
+        db.execute("""
+            INSERT INTO users (sub, handle, email, created_posts, bookmarks, recent_history)
+            VALUES (?, ?, ?, '[]', '[]', '[]')
+        """, (sub, handle, email))
+        db.commit()
+
+        row = db.execute("SELECT * FROM users WHERE sub = ?", (sub,)).fetchone()
+
     else:
-        db.execute(
-            "UPDATE users SET handle = ?, email = ? WHERE sub = ?",
-            (handle, email, sub)
-        )
-    db.commit()
-    return jsonify({"ok": True, "sub": sub, "handle": handle})
+        # Update handle/email in case user changed it
+        db.execute("""
+            UPDATE users
+            SET handle = ?, email = ?
+            WHERE sub = ?
+        """, (handle, email, sub))
+        db.commit()
+
+        row = db.execute("SELECT * FROM users WHERE sub = ?", (sub,)).fetchone()
+
+    return row
+
 
 @users_bp.get("/me")
 @requires_auth
 def me():
-    user = current_user()
-    sub = user.get("sub")
-    db = get_db()
-    row = db.execute("SELECT * FROM users WHERE sub = ?", (sub,)).fetchone()
-    if not row:
-        return jsonify({"error": "User not found"}), 404
+    """
+    Always auto-create the user entry on login.
+    """
+    row = auto_register_user()
     return jsonify(dict(row))
+
 
 @users_bp.get("/profile/<handle>")
 def profile(handle):

@@ -38,7 +38,7 @@ def handle_auth_error(e):
 app.register_blueprint(users_bp, url_prefix="/api")
 app.register_blueprint(posts_bp, url_prefix="/api")
 app.register_blueprint(tags_bp,  url_prefix="/api")
-app.register_blueprint(recent_bp)  
+app.register_blueprint(recent_bp, url_prefix="/api")
 
 
 app.teardown_appcontext(close_db)

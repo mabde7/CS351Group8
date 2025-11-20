@@ -27,7 +27,7 @@ export default function TopicPage({ topic }) {
   const fetchPosts = async () => {
     try {
       const res = await fetch(
-        `http://localhost:5000/api/posts?tag=${encodeURIComponent(topic)}`
+        `http://localhost:5000/api/posts?tag=${encodeURIComponent(topic.trim())}`
       );
       const data = await res.json();
       setPosts(Array.isArray(data) ? data : []);
@@ -37,6 +37,7 @@ export default function TopicPage({ topic }) {
   };
 
   useEffect(() => {
+    console.log("Topic value:", `[${topic}]`);
     fetchPosts();
   }, [topic]);
 
@@ -61,7 +62,7 @@ export default function TopicPage({ topic }) {
         body: JSON.stringify({
           title: title || "Untitled",
           text: editorContent,      // HTML from React-Quill
-          tags: [topic],            // important!
+          tags: [topic.trim()],            // important!
         }),
       });
 
