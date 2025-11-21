@@ -1,10 +1,15 @@
 // frontend/src/pages/mainmenu.js
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+} from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { getOrCreateUserKey } from "../utils/userKey";
 import HeaderBar from "../components/HeaderBar";
 
-const API_BASE = "http://localhost:5000";
+const API_BASE = "http://localhost:5000/api";
 
 export default function MainMenu() {
   const { isAuthenticated, user, logout, getIdTokenClaims } = useAuth0();
@@ -13,46 +18,50 @@ export default function MainMenu() {
   const [recent, setRecent] = useState([]);
   const [userKey, setUserKey] = useState(null);
 
-  // Persistent user key
+  // Build persistent user key
   useEffect(() => {
     const key = getOrCreateUserKey(isAuthenticated, user);
     setUserKey(key);
   }, [isAuthenticated, user]);
 
-  // Guest detection
+  // "guest" flag set from homepage
   const isGuestBanner = useMemo(
     () => !isAuthenticated && localStorage.getItem("guest") === "true",
     [isAuthenticated]
   );
 
   useEffect(() => {
-    if (isAuthenticated) localStorage.removeItem("guest");
+    if (isAuthenticated) {
+      localStorage.removeItem("guest");
+    }
   }, [isAuthenticated]);
 
+  // Router navigation helper
   const navigate = (to) => {
+    if (window.location.pathname === to) return;
     window.history.pushState({}, "", to);
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
-  // Extract handle
+  // Resolve user handle
   useEffect(() => {
     (async () => {
       try {
         const claims = await getIdTokenClaims();
-        setHandle(
+        const extracted =
           claims?.["https://uic.wiki/handle"] ||
-            user?.username ||
-            user?.nickname ||
-            user?.email?.split("@")[0] ||
-            "User"
-        );
-      } catch {
-        setHandle(
           user?.username ||
-            user?.nickname ||
-            user?.email?.split("@")[0] ||
-            "User"
-        );
+          user?.nickname ||
+          user?.email?.split("@")[0] ||
+          "User";
+        setHandle(extracted);
+      } catch {
+        const fallback =
+          user?.username ||
+          user?.nickname ||
+          user?.email?.split("@")[0] ||
+          "User";
+        setHandle(fallback);
       }
     })();
   }, [getIdTokenClaims, user]);
@@ -62,12 +71,14 @@ export default function MainMenu() {
     if (!ukey) return;
     try {
       const res = await fetch(
-        `${API_BASE}/api/recent-topics?user=${encodeURIComponent(ukey)}`
+        `${API_BASE}/recent-topics?user=${encodeURIComponent(ukey)}`
       );
       const data = await res.json();
       if (data?.ok && Array.isArray(data.topics)) {
         setRecent(data.topics);
-      } else setRecent([]);
+      } else {
+        setRecent([]);
+      }
     } catch {
       setRecent([]);
     }
@@ -77,15 +88,41 @@ export default function MainMenu() {
     fetchRecent(userKey);
   }, [userKey, fetchRecent]);
 
-  // Base topics
-  const starter = ["General", "CS", "Math", "English", "Biology"];
-  const topicsToShow = recent.length ? recent : starter;
+  // Refresh when tab becomes visible
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        fetchRecent(userKey);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [userKey, fetchRecent]);
+
+  const starterTopics = ["General", "CS", "Math", "English", "Biology"];
+  const topicsToShow = recent.length ? recent : starterTopics;
+
+  const topicButtonStyle = {
+    padding: "1rem",
+    width: "min(330px, 85vw)",
+    borderRadius: "10px",
+    border: "none",
+    background: "#ffffff",
+    color: "#001f62",
+    fontWeight: 700,
+    fontSize: "1.1rem",
+    cursor: "pointer",
+    boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
+  };
 
   return (
-    <div
+    <main
       style={{
         minHeight: "100vh",
+        margin: 0,
+        padding: 0,
         background: "#001f62",
+        color: "#fff",
         border: "3px solid red",
         boxSizing: "border-box",
         display: "flex",
@@ -93,131 +130,145 @@ export default function MainMenu() {
         alignItems: "center",
       }}
     >
-      {/* Shared site header */}
+      {/* Fixed header bar */}
       <HeaderBar title="Main Menu" />
 
-      <main
+      {/* Profile button top-left, under header */}
+     <button
+        onClick={() => navigate("/userpage")}
         style={{
-          width: "100%",
-          paddingTop: "4rem",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          color: "#fff",
+          position: "absolute",
+          left: "1rem",
+          top: "6rem",   
+          padding: "0.7rem 1.2rem",
+          borderRadius: "10px",
+          border: "none",
+          background: "#ffffff",
+          color: "#001f62",
+          fontWeight: 700,
+          cursor: "pointer",
+          boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
         }}
       >
-        <h2 style={{ fontSize: "2rem", fontWeight: 700, marginTop: "1rem" }}>
-          {recent.length ? "Recent Topics" : "Pick a Topic"}
-        </h2>
+        Profile
+      </button>
 
-        <div
-          style={{
-            marginTop: "2rem",
-            display: "flex",
-            flexDirection: "column",
-            gap: "1.2rem",
-            alignItems: "center",
-            width: "100%",
-          }}
-        >
-          {topicsToShow.map((topic) => (
+
+      <h2
+        style={{
+          marginTop: "1.5rem",
+          fontSize: "2rem",
+          fontWeight: 700,
+          textAlign: "center",
+        }}
+      >
+        {recent.length ? "Recent Topics" : "Pick a Topic"}
+      </h2>
+
+      <div
+        style={{
+          marginTop: "2rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: "1.2rem",
+          alignItems: "center",
+          width: "100%",
+        }}
+      >
+        {topicsToShow.map((t) => (
+          <button
+            key={t}
+            style={topicButtonStyle}
+            onClick={() => navigate(`/topic/${encodeURIComponent(t)}`)}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {/* Bottom-left: Browse Topics */}
+      <button
+        onClick={() => navigate("/topicPage")}
+        style={{
+          position: "fixed",
+          left: "1rem",
+          bottom: "1rem",
+          padding: "1rem 1.6rem",
+          borderRadius: "12px",
+          border: "none",
+          background: "#ffffff",
+          color: "#001f62",
+          cursor: "pointer",
+          fontWeight: 700,
+          fontSize: "1rem",
+          boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
+        }}
+      >
+        Browse Topics
+      </button>
+
+      {/* Bottom-right: auth controls */}
+      <div
+        style={{
+          position: "fixed",
+          right: "1rem",
+          bottom: "1rem",
+          display: "flex",
+          gap: "0.8rem",
+          alignItems: "center",
+        }}
+      >
+        {!isAuthenticated && isGuestBanner && (
+          <span style={{ color: "#fff", fontSize: "0.95rem" }}>
+            Browsing as <strong>Guest</strong>
+          </span>
+        )}
+
+        {isAuthenticated ? (
+          <>
+            <span style={{ color: "#fff", fontSize: "0.95rem" }}>
+              Hi, {handle}
+            </span>
             <button
-              key={topic}
-              onClick={() => navigate(`/topic/${encodeURIComponent(topic)}`)}
-              style={{
-                padding: "1rem",
-                width: "min(330px, 85vw)",
-                borderRadius: "10px",
-                border: "none",
-                background: "#ffffff",
-                color: "#001f62",
-                fontWeight: 700,
-                fontSize: "1.1rem",
-                cursor: "pointer",
-                boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
-              }}
-            >
-              {topic}
-            </button>
-          ))}
-        </div>
-
-        {/* Left bottom button */}
-        <button
-          onClick={() => navigate("/topicPage")}
-          style={{
-            position: "fixed",
-            left: "1rem",
-            bottom: "1rem",
-            padding: "1rem 1.6rem",
-            borderRadius: "12px",
-            background: "#ffffff",
-            border: "none",
-            cursor: "pointer",
-            color: "#001f62",
-            fontWeight: 700,
-            boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
-          }}
-        >
-          Browse Topics
-        </button>
-
-        {/* Right bottom auth controls */}
-        <div
-          style={{
-            position: "fixed",
-            right: "1rem",
-            bottom: "1rem",
-            display: "flex",
-            gap: "0.8rem",
-            alignItems: "center",
-            fontSize: "0.95rem",
-          }}
-        >
-          {!isAuthenticated && isGuestBanner && (
-            <span>Browsing as <strong>Guest</strong></span>
-          )}
-
-          {isAuthenticated ? (
-            <>
-              <span>Hi, {handle}</span>
-              <button
-                onClick={() =>
-                  logout({ logoutParams: { returnTo: window.location.origin } })
-                }
-                style={{
-                  padding: "1rem 1.6rem",
-                  borderRadius: "12px",
-                  background: "#fff",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "#001f62",
-                  fontWeight: 700,
-                  boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
-                }}
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => navigate("/login")}
+              onClick={() =>
+                logout({
+                  logoutParams: { returnTo: window.location.origin },
+                })
+              }
               style={{
                 padding: "1rem 1.6rem",
                 borderRadius: "12px",
-                background: "#fff",
                 border: "none",
+                background: "#ffffff",
                 cursor: "pointer",
                 color: "#001f62",
                 fontWeight: 700,
+                fontSize: "1rem",
                 boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
               }}
             >
-              Login
+              Logout
             </button>
-          )}
-        </div>
-      </main>
-    </div>
+          </>
+        ) : (
+          <button
+            onClick={() => navigate("/login")}
+            style={{
+              padding: "1rem 1.6rem",
+              borderRadius: "12px",
+              border: "none",
+              background: "#ffffff",
+              cursor: "pointer",
+              color: "#001f62",
+              fontWeight: 700,
+              fontSize: "1rem",
+              boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
+            }}
+          >
+            Login
+          </button>
+        )}
+      </div>
+    </main>
   );
 }

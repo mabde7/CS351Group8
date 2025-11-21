@@ -5,6 +5,8 @@ import DOMPurify from "dompurify";
 import PostEditor from "../components/PostEditor";
 import HeaderBar from "../components/HeaderBar";
 
+const API_BASE = "http://localhost:5000";
+
 export default function TopicPage({ topic }) {
   const { isAuthenticated, getAccessTokenSilently } = useAuth0();
 
@@ -14,31 +16,109 @@ export default function TopicPage({ topic }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null);
+
   const [selectedPost, setSelectedPost] = useState(null);
   const [postModalOpen, setPostModalOpen] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [postAnon, setPostAnon] = useState(false);
+
+  const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
 
   const navigate = (to) => {
     window.history.pushState({}, "", to);
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
-  // Load posts
+  // ---------------------------
+  // Fetch posts for this topic
+  // ---------------------------
   const fetchPosts = useCallback(async () => {
     try {
       const res = await fetch(
-        `http://localhost:5000/api/posts?tag=${encodeURIComponent(topic)}`
+        `${API_BASE}/api/posts?tag=${encodeURIComponent(topic)}`
       );
       const data = await res.json();
       setPosts(Array.isArray(data) ? data : []);
-    } catch {}
+    } catch (err) {
+      console.error("Failed to load posts", err);
+    }
   }, [topic]);
 
   useEffect(() => {
     fetchPosts();
   }, [fetchPosts]);
 
+  // ---------------------------
+  // Load bookmarks for user
+  // ---------------------------
+  const loadBookmarks = useCallback(async () => {
+    if (!isAuthenticated) {
+      setBookmarkedIds(new Set());
+      return;
+    }
+    try {
+      const token = await getAccessTokenSilently();
+      const res = await fetch(`${API_BASE}/api/bookmarks`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const ids = Array.isArray(data.ids) ? data.ids : [];
+      setBookmarkedIds(new Set(ids));
+    } catch (err) {
+      console.error("Failed to load bookmarks", err);
+    }
+  }, [isAuthenticated, getAccessTokenSilently]);
+
+  useEffect(() => {
+    loadBookmarks();
+  }, [loadBookmarks]);
+
+  const isBookmarked = (postID) => bookmarkedIds.has(postID);
+
+  const toggleBookmark = async (post) => {
+    if (!post || !post.postID) return;
+
+    if (!isAuthenticated) {
+      setNotice("You must log in to bookmark posts.");
+      setTimeout(() => setNotice(null), 3000);
+      return;
+    }
+
+    const currentlyBookmarked = isBookmarked(post.postID);
+    const method = currentlyBookmarked ? "DELETE" : "POST";
+
+    try {
+      const token = await getAccessTokenSilently();
+      const res = await fetch(
+        `${API_BASE}/api/bookmarks/${post.postID}`,
+        {
+          method,
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (!res.ok) return;
+
+      setBookmarkedIds((prev) => {
+        const next = new Set(prev);
+        if (currentlyBookmarked) {
+          next.delete(post.postID);
+        } else {
+          next.add(post.postID);
+        }
+        return next;
+      });
+    } catch (err) {
+      console.error("Bookmark toggle failed", err);
+    }
+  };
+
+  // ---------------------------
+  // Filtering & helpers
+  // ---------------------------
   const filtered = posts.filter((p) =>
     (p.title || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -46,15 +126,17 @@ export default function TopicPage({ topic }) {
   const quillIsEmpty = (html) =>
     !html || html.replace(/<(.|\n)*?>/g, "").trim().length === 0;
 
-  // Create a new post
   const submitPost = async (e) => {
     e.preventDefault();
-    if (quillIsEmpty(editorContent)) return alert("Write something first.");
+    if (quillIsEmpty(editorContent)) {
+      alert("Write something first.");
+      return;
+    }
 
     setBusy(true);
     try {
       const token = await getAccessTokenSilently();
-      const res = await fetch("http://localhost:5000/api/posts", {
+      const res = await fetch(`${API_BASE}/api/posts`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -81,6 +163,23 @@ export default function TopicPage({ topic }) {
     } finally {
       setBusy(false);
     }
+  };
+
+  const postButtonStyle = {
+    padding: "0.7rem 1rem",
+    borderRadius: "10px",
+    background: "#ffffff",
+    border: "none",
+    cursor: "pointer",
+    fontWeight: 700,
+    fontSize: "0.95rem",
+    maxWidth: "40ch",
+    minWidth: "12ch",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    textAlign: "center",
+    boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
   };
 
   return (
@@ -113,7 +212,6 @@ export default function TopicPage({ topic }) {
         ← Back
       </button>
 
-      {/* MAIN CONTENT */}
       <main
         style={{
           paddingTop: "5.5rem",
@@ -124,7 +222,7 @@ export default function TopicPage({ topic }) {
           width: "100%",
         }}
       >
-        {/* SEARCH BAR */}
+        {/* SEARCH */}
         <div style={{ width: "min(800px, 92vw)" }}>
           <h2 style={{ textAlign: "center" }}>Search Posts</h2>
           <input
@@ -141,7 +239,7 @@ export default function TopicPage({ topic }) {
           />
         </div>
 
-        {/* POSTS LIST */}
+        {/* POSTS */}
         <div style={{ width: "min(800px, 92vw)", marginTop: "2rem" }}>
           <h2 style={{ textAlign: "center" }}>Posts</h2>
 
@@ -156,29 +254,27 @@ export default function TopicPage({ topic }) {
                 gap: "1rem",
               }}
             >
-              {filtered.map((p) => (
-                <button
-                  key={p.postID}
-                  style={{
-                    padding: "0.7rem 1rem",
-                    borderRadius: "10px",
-                    background: "#fff",
-                    border: "none",
-                    cursor: "pointer",
-                    fontWeight: 700,
-                    fontSize: "0.95rem",
-                    color: "#001f62",
-                  }}
-                  onClick={() => {
-                    setSelectedPost(p);
-                    setPostModalOpen(true);
-                  }}
-                >
-                  {(p.title || "Untitled").length > 40
-                    ? p.title.slice(0, 37) + "…"
-                    : p.title}
-                </button>
-              ))}
+              {filtered.map((p) => {
+                const rawTitle = p.title || "Untitled";
+                const displayTitle =
+                  rawTitle.length > 40
+                    ? rawTitle.slice(0, 37) + "..."
+                    : rawTitle;
+
+                return (
+                  <button
+                    key={p.postID}
+                    style={postButtonStyle}
+                    onClick={() => {
+                      setSelectedPost(p);
+                      setPostModalOpen(true);
+                    }}
+                    title={rawTitle}
+                  >
+                    {displayTitle}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -187,7 +283,7 @@ export default function TopicPage({ topic }) {
         <button
           onClick={() => {
             if (!isAuthenticated) {
-              setNotice("You must log in to post.");
+              setNotice("You must log in to make a post.");
               setTimeout(() => setNotice(null), 3000);
               return;
             }
@@ -209,9 +305,7 @@ export default function TopicPage({ topic }) {
         </button>
       </main>
 
-      {/* ====================== */}
-      {/*   POST VIEW MODAL     */}
-      {/* ====================== */}
+      {/* POST VIEW MODAL */}
       {postModalOpen && selectedPost && (
         <div
           style={{
@@ -234,45 +328,74 @@ export default function TopicPage({ topic }) {
               borderRadius: "12px",
               maxHeight: "80vh",
               overflowY: "auto",
+              color: "#fff",
             }}
           >
-            {/* TITLE - BOLD WHITE */}
-            <h2
+            {/* Title + bookmark star row */}
+            <div
               style={{
-                marginTop: 0,
-                color: "#ffffff",
-                fontWeight: 800,
-                fontSize: "1.6rem",
-                textAlign: "center",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "0.75rem",
               }}
             >
-              {selectedPost.title || "Untitled"}
-            </h2>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: "1.5rem",
+                  fontWeight: 800,
+                  color: "#fff",
+                }}
+              >
+                {selectedPost.title || "Untitled"}
+              </h2>
+              <button
+                onClick={() => toggleBookmark(selectedPost)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "1.8rem",
+                  color: isBookmarked(selectedPost.postID)
+                    ? "#ffd54f"
+                    : "#bbbbbb",
+                }}
+                aria-label={
+                  isBookmarked(selectedPost.postID)
+                    ? "Remove bookmark"
+                    : "Bookmark post"
+                }
+              >
+                {isBookmarked(selectedPost.postID) ? "★" : "☆"}
+              </button>
+            </div>
 
-            {/* METADATA */}
+            {/* Meta row */}
             <div
               style={{
                 fontSize: "0.9rem",
                 marginBottom: "0.75rem",
-                opacity: 0.75,
-                color: "#ffffff",
-                textAlign: "center",
+                opacity: 0.9,
               }}
             >
-              by <strong>{selectedPost.handle}</strong> ·{" "}
-              {new Date(selectedPost.created_at).toLocaleString()}
+              by{" "}
+              <strong>{selectedPost.handle || "Unknown"}</strong>
+              {selectedPost.created_at && (
+                <>
+                  {" "}
+                  ·{" "}
+                  {new Date(selectedPost.created_at).toLocaleString()}
+                </>
+              )}
             </div>
 
-            {/* CONTENT - WHITE */}
+            {/* Post body - white text */}
             <div
               style={{
-                background: "rgba(255,255,255,0.1)",
-                padding: "1rem",
-                borderRadius: "10px",
-                color: "#ffffff",
-                fontSize: "1rem",
+                marginTop: "0.75rem",
                 lineHeight: 1.5,
-                whiteSpace: "pre-wrap",
+                color: "#fff",
               }}
               dangerouslySetInnerHTML={{
                 __html: DOMPurify.sanitize(selectedPost.text || ""),
@@ -282,9 +405,7 @@ export default function TopicPage({ topic }) {
         </div>
       )}
 
-      {/* ====================== */}
-      {/*   CREATE POST MODAL    */}
-      {/* ====================== */}
+      {/* CREATE POST MODAL */}
       {open && (
         <div
           style={{
@@ -305,9 +426,11 @@ export default function TopicPage({ topic }) {
               background: "#0b2a88",
               padding: "1.2rem",
               borderRadius: 10,
+              boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
+              color: "#fff",
             }}
           >
-            <h3 style={{ color: "#fff" }}>New post in {topic}</h3>
+            <h3 style={{ marginTop: 0 }}>New post in {topic}</h3>
 
             <form onSubmit={submitPost}>
               <input
@@ -326,10 +449,10 @@ export default function TopicPage({ topic }) {
 
               <label
                 style={{
-                  color: "#fff",
                   display: "flex",
                   gap: ".4rem",
                   marginBottom: ".5rem",
+                  fontSize: "0.9rem",
                 }}
               >
                 <input
@@ -396,7 +519,7 @@ export default function TopicPage({ topic }) {
         </div>
       )}
 
-      {/* GUEST TOAST */}
+      {/* Guest Notice */}
       {notice && (
         <div
           style={{

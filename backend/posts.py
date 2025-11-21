@@ -1,18 +1,20 @@
 # backend/posts.py
-from flask import Blueprint, jsonify, request,abort
+from flask import Blueprint, jsonify, request, abort
 import json
 from db import get_db
 from auth import requires_auth, current_user
+from users import auto_register_user  # to ensure user row exists
 
 posts_bp = Blueprint("posts", __name__)
 
+
 def remove_post_from_user_lists(db, user_sub, post_id):
     """
-    Removes post_id from created_posts, bookmarks, and recent_history
-    for a given user. All three are JSON arrays stored in TEXT fields.
+    Removes post_id from created_posts and bookmarks ONLY.
+    recent_history contains TAGS, not posts — so we do NOT modify it here.
     """
     row = db.execute(
-        "SELECT created_posts, bookmarks, recent_history FROM users WHERE sub = ?",
+        "SELECT created_posts, bookmarks FROM users WHERE sub = ?",
         (user_sub,),
     ).fetchone()
 
@@ -21,7 +23,6 @@ def remove_post_from_user_lists(db, user_sub, post_id):
 
     created = json.loads(row["created_posts"])
     bookmarks = json.loads(row["bookmarks"])
-    history = json.loads(row["recent_history"])
 
     changed = False
 
@@ -33,19 +34,14 @@ def remove_post_from_user_lists(db, user_sub, post_id):
         bookmarks.remove(post_id)
         changed = True
 
-    # Remove from recent_history if your format stores post IDs directly
-    if post_id in history:
-        history.remove(post_id)
-        changed = True
-
     if changed:
         db.execute(
             """
             UPDATE users
-            SET created_posts = ?, bookmarks = ?, recent_history = ?
+            SET created_posts = ?, bookmarks = ?
             WHERE sub = ?
             """,
-            (json.dumps(created), json.dumps(bookmarks), json.dumps(history), user_sub),
+            (json.dumps(created), json.dumps(bookmarks), user_sub),
         )
 
 
@@ -86,8 +82,10 @@ def create_post():
     row = db.execute("SELECT created_posts FROM users WHERE sub = ?", (sub,)).fetchone()
     created = json.loads(row["created_posts"]) if row else []
     created.append(post_id)
-    db.execute("UPDATE users SET created_posts = ? WHERE sub = ?", (json.dumps(created), sub))
-
+    db.execute(
+        "UPDATE users SET created_posts = ? WHERE sub = ?",
+        (json.dumps(created), sub),
+    )
 
     # upsert tags + junction rows
     for tag in tags:
@@ -136,7 +134,7 @@ def list_posts():
 
     posts = [dict(r) for r in rows]
 
-    # attach tags for each post
+    # attach tags, links, images for each post
     for p in posts:
         p["links"]  = json.loads(p["links"])
         p["images"] = json.loads(p["images"])
@@ -147,6 +145,7 @@ def list_posts():
         p["tags"] = [tr["tag"] for tr in trows]
 
     return jsonify(posts)
+
 
 @posts_bp.delete("/posts/<int:post_id>")
 @requires_auth
@@ -186,3 +185,154 @@ def delete_post(post_id):
     db.commit()
 
     return jsonify({"deleted": post_id}), 200
+
+
+# -------------------------------------------------------------------
+# NEW: bulk fetch posts by IDs (for user page)
+# GET /api/posts/by_ids?ids=1,2,3
+# -------------------------------------------------------------------
+@posts_bp.get("/posts/by_ids")
+def posts_by_ids():
+    ids_param = (request.args.get("ids") or "").strip()
+    if not ids_param:
+        return jsonify([])
+
+    try:
+        raw_ids = [int(x) for x in ids_param.split(",") if x.strip()]
+    except ValueError:
+        return jsonify({"error": "Invalid ids parameter"}), 400
+
+    # dedupe
+    ids = list(dict.fromkeys(raw_ids))
+    if not ids:
+        return jsonify([])
+
+    db = get_db()
+    placeholders = ",".join("?" for _ in ids)
+
+    rows = db.execute(
+        f"""
+        SELECT p.*, u.handle
+        FROM posts p
+        JOIN users u ON p.author_sub = u.sub
+        WHERE p.postID IN ({placeholders})
+        ORDER BY p.created_at DESC
+        """,
+        ids,
+    ).fetchall()
+
+    posts = [dict(r) for r in rows]
+
+    for p in posts:
+        p["links"] = json.loads(p["links"])
+        p["images"] = json.loads(p["images"])
+        trows = db.execute(
+            "SELECT tag FROM post_tags WHERE postID = ? ORDER BY tag ASC",
+            (p["postID"],),
+        ).fetchall()
+        p["tags"] = [tr["tag"] for tr in trows]
+
+    return jsonify(posts)
+
+
+# -------------------------------------------------------------------
+# NEW: bookmark endpoints
+#   POST   /api/bookmarks/<post_id>   -> add bookmark
+#   DELETE /api/bookmarks/<post_id>   -> remove bookmark
+#   GET    /api/bookmarks             -> get user's bookmarked posts
+# -------------------------------------------------------------------
+@posts_bp.post("/bookmarks/<int:post_id>")
+@requires_auth
+def add_bookmark(post_id):
+    """
+    Add a post to the current user's bookmarks list (JSON array of IDs).
+    """
+    # ensure user exists and get row
+    row = auto_register_user()
+    sub = row["sub"]
+    db = get_db()
+
+    # ensure post exists
+    exists = db.execute(
+        "SELECT 1 FROM posts WHERE postID = ?",
+        (post_id,),
+    ).fetchone()
+    if not exists:
+        return jsonify({"error": "Post not found"}), 404
+
+    bookmarks = json.loads(row["bookmarks"] or "[]")
+    if post_id not in bookmarks:
+        bookmarks.append(post_id)
+        db.execute(
+            "UPDATE users SET bookmarks = ? WHERE sub = ?",
+            (json.dumps(bookmarks), sub),
+        )
+        db.commit()
+
+    return jsonify({"bookmarked": True, "postID": post_id})
+
+
+@posts_bp.delete("/bookmarks/<int:post_id>")
+@requires_auth
+def remove_bookmark(post_id):
+    """
+    Remove a post from the current user's bookmarks list.
+    """
+    row = auto_register_user()
+    sub = row["sub"]
+    db = get_db()
+
+    bookmarks = json.loads(row["bookmarks"] or "[]")
+    if post_id in bookmarks:
+        bookmarks.remove(post_id)
+        db.execute(
+            "UPDATE users SET bookmarks = ? WHERE sub = ?",
+            (json.dumps(bookmarks), sub),
+        )
+        db.commit()
+
+    return jsonify({"bookmarked": False, "postID": post_id})
+
+
+@posts_bp.get("/bookmarks")
+@requires_auth
+def list_bookmarks():
+    """
+    Return the current user's bookmarks:
+    {
+      "ids": [1,2,3],
+      "posts": [ {post}, ... ]   # with handle, tags, links, images
+    }
+    """
+    row = auto_register_user()
+    db = get_db()
+
+    bookmark_ids = json.loads(row["bookmarks"] or "[]")
+    if not bookmark_ids:
+        return jsonify({"ids": [], "posts": []})
+
+    placeholders = ",".join("?" for _ in bookmark_ids)
+
+    rows = db.execute(
+        f"""
+        SELECT p.*, u.handle
+        FROM posts p
+        JOIN users u ON p.author_sub = u.sub
+        WHERE p.postID IN ({placeholders})
+        ORDER BY p.created_at DESC
+        """,
+        bookmark_ids,
+    ).fetchall()
+
+    posts = [dict(r) for r in rows]
+
+    for p in posts:
+        p["links"] = json.loads(p["links"])
+        p["images"] = json.loads(p["images"])
+        trows = db.execute(
+            "SELECT tag FROM post_tags WHERE postID = ? ORDER BY tag ASC",
+            (p["postID"],),
+        ).fetchall()
+        p["tags"] = [tr["tag"] for tr in trows]
+
+    return jsonify({"ids": bookmark_ids, "posts": posts})

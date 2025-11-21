@@ -10,6 +10,8 @@ from users import users_bp
 from tags import tags_bp
 from auth import AuthError
 from recent import recent_bp
+from bookmarks import bookmarks_bp
+
 
 
 
@@ -39,6 +41,8 @@ app.register_blueprint(users_bp, url_prefix="/api")
 app.register_blueprint(posts_bp, url_prefix="/api")
 app.register_blueprint(tags_bp,  url_prefix="/api")
 app.register_blueprint(recent_bp, url_prefix="/api")
+app.register_blueprint(bookmarks_bp, url_prefix="/api")
+
 
 
 app.teardown_appcontext(close_db)
