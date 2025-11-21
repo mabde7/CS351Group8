@@ -26,7 +26,11 @@ export default function TopicPage({ topic }) {
 
   const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
 
-  // user key for recent-topics skiplist
+  const [subtags, setSubtags] = useState([]);
+  const [activeTagFilter, setActiveTagFilter] = useState(null);
+
+  const [customTag, setCustomTag] = useState("");
+
   const [userKey, setUserKey] = useState(null);
 
   const navigate = (to) => {
@@ -34,17 +38,11 @@ export default function TopicPage({ topic }) {
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
-  // -------------------------------------------------
-  // Build persistent user key (same logic as MainMenu)
-  // -------------------------------------------------
   useEffect(() => {
     const key = getOrCreateUserKey(isAuthenticated, user);
     setUserKey(key);
   }, [isAuthenticated, user]);
 
-  // ---------------------------
-  // Fetch posts for this topic
-  // ---------------------------
   const fetchPosts = useCallback(async () => {
     try {
       const res = await fetch(
@@ -61,9 +59,6 @@ export default function TopicPage({ topic }) {
     fetchPosts();
   }, [fetchPosts]);
 
-  // ---------------------------
-  // Record this topic in recents
-  // ---------------------------
   const recordRecentTopic = useCallback(async () => {
     if (!userKey || !topic) return;
 
@@ -82,9 +77,63 @@ export default function TopicPage({ topic }) {
     recordRecentTopic();
   }, [recordRecentTopic]);
 
-  // ---------------------------
-  // Load bookmarks for user
-  // ---------------------------
+  useEffect(() => {
+    setActiveTagFilter(null);
+
+    const allTags = new Set();
+    posts.forEach((p) => {
+      (p.tags || []).forEach((t) => allTags.add(t));
+    });
+
+    const tagsArray = Array.from(allTags);
+    if (!tagsArray.length) {
+      setSubtags([]);
+      return;
+    }
+
+    const topicSegs = (topic || "")
+      .split("/")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const depth = topicSegs.length;
+
+    const childrenMap = {};
+
+    tagsArray.forEach((tag) => {
+      const segs = (tag || "")
+        .split("/")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (segs.length <= depth) return;
+
+      for (let i = 0; i < depth; i++) {
+        if (segs[i] !== topicSegs[i]) return;
+      }
+
+      const childSeg = segs[depth];
+      const childPath = [...topicSegs, childSeg].join("/");
+
+      if (!childrenMap[childPath]) {
+        childrenMap[childPath] = {
+          label: childSeg,
+          fullPath: childPath,
+          isLeaf: true,
+        };
+      }
+    });
+
+    const childList = Object.values(childrenMap);
+
+    childList.forEach((child) => {
+      const prefix = child.fullPath + "/";
+      const hasDescendant = tagsArray.some((t) => t.startsWith(prefix));
+      child.isLeaf = !hasDescendant;
+    });
+
+    childList.sort((a, b) => a.label.localeCompare(b.label));
+    setSubtags(childList);
+  }, [posts, topic]);
+
   const loadBookmarks = useCallback(async () => {
     if (!isAuthenticated) {
       setBookmarkedIds(new Set());
@@ -149,15 +198,16 @@ export default function TopicPage({ topic }) {
     }
   };
 
-  // ---------------------------
-  // Filtering & helpers
-  // ---------------------------
-  const filtered = posts.filter((p) =>
-    (p.title || "").toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   const quillIsEmpty = (html) =>
     !html || html.replace(/<(.|\n)*?>/g, "").trim().length === 0;
+
+  const tagFiltered = activeTagFilter
+    ? posts.filter((p) => (p.tags || []).includes(activeTagFilter))
+    : posts;
+
+  const filtered = tagFiltered.filter((p) =>
+    (p.title || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const submitPost = async (e) => {
     e.preventDefault();
@@ -169,6 +219,11 @@ export default function TopicPage({ topic }) {
     setBusy(true);
     try {
       const token = await getAccessTokenSilently();
+
+      const tagsToSend = [];
+      if (topic && topic.trim()) tagsToSend.push(topic.trim());
+      if (customTag && customTag.trim()) tagsToSend.push(customTag.trim());
+
       const res = await fetch(`${API_BASE}/api/posts`, {
         method: "POST",
         headers: {
@@ -178,7 +233,7 @@ export default function TopicPage({ topic }) {
         body: JSON.stringify({
           title: title || "Untitled",
           text: editorContent,
-          tags: [topic],
+          tags: tagsToSend,
           anonymous: postAnon,
         }),
       });
@@ -191,9 +246,9 @@ export default function TopicPage({ topic }) {
       setTitle("");
       setEditorContent("");
       setPostAnon(false);
+      setCustomTag("");
       setOpen(false);
-      fetchPosts();
-      // also re-record in recents on successful post
+      await fetchPosts();
       recordRecentTopic();
     } finally {
       setBusy(false);
@@ -223,12 +278,12 @@ export default function TopicPage({ topic }) {
         minHeight: "100vh",
         background: "#001f62",
         border: "3px solid red",
-        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
       <HeaderBar title={`Topic – ${topic}`} />
 
-      {/* BACK BUTTON */}
       <button
         onClick={() => navigate("/mainmenu")}
         style={{
@@ -257,9 +312,9 @@ export default function TopicPage({ topic }) {
           width: "100%",
         }}
       >
-        {/* SEARCH */}
         <div style={{ width: "min(800px, 92vw)" }}>
           <h2 style={{ textAlign: "center" }}>Search Posts</h2>
+
           <input
             type="text"
             placeholder="Search by title…"
@@ -272,9 +327,85 @@ export default function TopicPage({ topic }) {
               border: "none",
             }}
           />
+
+          {subtags.length > 0 && (
+            <div
+              style={{
+                marginTop: "0.7rem",
+                padding: "0.5rem 0.75rem",
+                borderRadius: "10px",
+                background: "#132b82",
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "0.5rem",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "0.85rem",
+              }}
+            >
+              <span>Subtopics:</span>
+              {subtags.map((st) => (
+                <button
+                  key={st.fullPath}
+                  onClick={() => {
+                    if (st.isLeaf) {
+                      setActiveTagFilter(st.fullPath);
+                    } else {
+                      navigate(
+                        `/topic/${encodeURIComponent(st.fullPath)}`
+                      );
+                    }
+                  }}
+                  style={{
+                    padding: "0.3rem 0.7rem",
+                    borderRadius: "999px",
+                    border: "none",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                    fontSize: "0.8rem",
+                    background: st.isLeaf ? "#ffffff" : "#ffd54f",
+                    color: "#001f62",
+                    boxShadow: "0 3px 8px rgba(0,0,0,0.35)",
+                  }}
+                >
+                  {st.label}
+                  {st.isLeaf ? "" : " ›"}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {activeTagFilter && activeTagFilter !== topic && (
+            <div
+              style={{
+                marginTop: "0.7rem",
+                padding: "0.5rem 0.75rem",
+                borderRadius: "10px",
+                background: "#132b82",
+                textAlign: "center",
+                fontSize: "0.85rem",
+              }}
+            >
+              Filtering by:{" "}
+              <strong>{activeTagFilter}</strong>{" "}
+              <button
+                type="button"
+                onClick={() => setActiveTagFilter(null)}
+                style={{
+                  marginLeft: "0.5rem",
+                  padding: "0.2rem 0.6rem",
+                  borderRadius: "6px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "0.8rem",
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* POSTS */}
         <div style={{ width: "min(800px, 92vw)", marginTop: "2rem" }}>
           <h2 style={{ textAlign: "center" }}>Posts</h2>
 
@@ -314,7 +445,6 @@ export default function TopicPage({ topic }) {
           )}
         </div>
 
-        {/* NEW POST BUTTON */}
         <button
           onClick={() => {
             if (!isAuthenticated) {
@@ -366,7 +496,6 @@ export default function TopicPage({ topic }) {
               color: "#fff",
             }}
           >
-            {/* Title + bookmark star row */}
             <div
               style={{
                 display: "flex",
@@ -406,7 +535,6 @@ export default function TopicPage({ topic }) {
               </button>
             </div>
 
-            {/* Meta row */}
             <div
               style={{
                 fontSize: "0.9rem",
@@ -425,7 +553,6 @@ export default function TopicPage({ topic }) {
               )}
             </div>
 
-            {/* Post body - white text */}
             <div
               style={{
                 marginTop: "0.75rem",
@@ -498,6 +625,24 @@ export default function TopicPage({ topic }) {
                 Post anonymously
               </label>
 
+              <div style={{ marginBottom: ".5rem", fontSize: "0.85rem" }}>
+                <div style={{ marginBottom: "0.25rem" }}>
+                  Extra tag (optional, full path like "CS/CS315/Lab1"):
+                </div>
+                <input
+                  type="text"
+                  value={customTag}
+                  onChange={(e) => setCustomTag(e.target.value)}
+                  placeholder='e.g., "CS/CS315/Lab1"'
+                  style={{
+                    width: "100%",
+                    padding: ".4rem",
+                    borderRadius: 6,
+                    border: "none",
+                  }}
+                />
+              </div>
+
               <div
                 style={{
                   background: "#fff",
@@ -554,7 +699,6 @@ export default function TopicPage({ topic }) {
         </div>
       )}
 
-      {/* Guest Notice */}
       {notice && (
         <div
           style={{
@@ -581,6 +725,28 @@ export default function TopicPage({ topic }) {
           </div>
         </div>
       )}
+
+      {/* 🔵 Footer Banner (ADDED) */}
+      <footer
+        style={{
+          marginTop: "auto",
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          padding: "2rem 0",
+        }}
+      >
+        <img
+          src="/UICBanner.svg"
+          alt="UIC Banner"
+          style={{
+            height: "150px",
+            maxWidth: "95%",
+            width: "auto",
+            objectFit: "contain",
+          }}
+        />
+      </footer>
     </div>
   );
 }

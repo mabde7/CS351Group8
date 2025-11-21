@@ -291,6 +291,28 @@ export default function MainMenu() {
           </button>
         )}
       </div>
+
+      {/* 🔵 Footer Banner */}
+      <footer
+        style={{
+          marginTop: "auto",
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          padding: "2rem 0",
+        }}
+      >
+        <img
+          src="/UICBanner.svg"
+          alt="UIC Banner"
+          style={{
+            height: "150px",
+            maxWidth: "95%",
+            width: "auto",
+            objectFit: "contain",
+          }}
+        />
+      </footer>
     </main>
   );
 }

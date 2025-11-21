@@ -1,9 +1,9 @@
 # backend/bookmarks.py
 import json
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify
 from db import get_db
-from auth import requires_auth, current_user
-from users import auto_register_user  # ensure user row exists
+from auth import requires_auth
+from users import auto_register_user
 
 bookmarks_bp = Blueprint("bookmarks", __name__)
 
@@ -12,7 +12,7 @@ def _fetch_posts_for_ids(db, ids):
     if not ids:
         return []
 
-    placeholders = ",".join("?" * len(ids))
+    placeholders = ",".join("?" for _ in ids)
     rows = db.execute(
         f"""
         SELECT p.*, u.handle
@@ -27,8 +27,8 @@ def _fetch_posts_for_ids(db, ids):
     posts = [dict(r) for r in rows]
 
     for p in posts:
-        p["links"] = json.loads(p["links"])
-        p["images"] = json.loads(p["images"])
+        p["links"] = json.loads(p.get("links") or "[]")
+        p["images"] = json.loads(p.get("images") or "[]")
         trows = db.execute(
             "SELECT tag FROM post_tags WHERE postID = ? ORDER BY tag ASC",
             (p["postID"],),
@@ -38,30 +38,37 @@ def _fetch_posts_for_ids(db, ids):
     return posts
 
 
-@bookmarks_bp.post("/bookmarks")
+@bookmarks_bp.get("/bookmarks")
 @requires_auth
-def add_bookmark():
+def list_bookmarks():
     """
-    STYLE A
+    Return the current user's bookmarks:
 
-    POST /api/bookmarks
-    Body:
-      { "postID": 123 }
-
-    Adds the given postID to the current user's bookmarks JSON list.
+    {
+      "ids": [1,2,3],
+      "posts": [ {post}, ... ]
+    }
     """
-    # Ensure user row exists
     row = auto_register_user()
-    sub = row["sub"]
-
-    body = request.get_json(force=True) or {}
-    post_id = body.get("postID")
-    if not isinstance(post_id, int):
-        return jsonify({"error": "postID (int) required"}), 400
-
     db = get_db()
 
-    # Ensure the post exists
+    bookmark_ids = json.loads(row["bookmarks"] or "[]")
+    posts = _fetch_posts_for_ids(db, bookmark_ids)
+
+    return jsonify({"ids": bookmark_ids, "posts": posts}), 200
+
+
+@bookmarks_bp.post("/bookmarks/<int:post_id>")
+@requires_auth
+def add_bookmark(post_id):
+    """
+    Add a postID to the current user's bookmarks list.
+    """
+    row = auto_register_user()
+    sub = row["sub"]
+    db = get_db()
+
+    # ensure post exists
     exists = db.execute(
         "SELECT 1 FROM posts WHERE postID = ?",
         (post_id,),
@@ -78,17 +85,14 @@ def add_bookmark():
         )
         db.commit()
 
-    return jsonify({"ok": True, "bookmarks": bookmarks}), 200
+    return jsonify({"bookmarked": True, "postID": post_id}), 200
 
 
 @bookmarks_bp.delete("/bookmarks/<int:post_id>")
 @requires_auth
 def remove_bookmark(post_id):
     """
-    STYLE A
-
-    DELETE /api/bookmarks/<post_id>
-    Removes a postID from the current user's bookmarks.
+    Remove a postID from the current user's bookmarks list.
     """
     row = auto_register_user()
     sub = row["sub"]
@@ -103,27 +107,4 @@ def remove_bookmark(post_id):
         )
         db.commit()
 
-    return jsonify({"ok": True, "bookmarks": bookmarks}), 200
-
-
-@bookmarks_bp.get("/bookmarks")
-@requires_auth
-def list_bookmarks():
-    """
-    STYLE A
-
-    GET /api/bookmarks
-
-    Returns the current user's bookmarked posts as a list:
-      [ {post}, ... ]
-    matching the structure of /api/posts (includes handle, tags, links, images).
-    """
-    row = auto_register_user()
-    db = get_db()
-
-    bookmark_ids = json.loads(row["bookmarks"] or "[]")
-    if not bookmark_ids:
-        return jsonify([])
-
-    posts = _fetch_posts_for_ids(db, bookmark_ids)
-    return jsonify(posts)
+    return jsonify({"bookmarked": False, "postID": post_id}), 200
