@@ -2,119 +2,77 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import DOMPurify from "dompurify";
+import HeaderBar from "../components/HeaderBar";
 
 const API_BASE = "http://localhost:5000";
 
 export default function UserPage() {
-  const { isAuthenticated, getAccessTokenSilently, loginWithRedirect, user } =
+  const { isAuthenticated, getAccessTokenSilently, user, loginWithRedirect } =
     useAuth0();
 
+  const [displayName, setDisplayName] = useState("");
   const [createdPosts, setCreatedPosts] = useState([]);
   const [bookmarkedPosts, setBookmarkedPosts] = useState([]);
   const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
+  const [loading, setLoading] = useState(true);
 
   const [selectedPost, setSelectedPost] = useState(null);
   const [postModalOpen, setPostModalOpen] = useState(false);
 
-  const [displayName, setDisplayName] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const navigate = (to) => {
+    window.history.pushState({}, "", to);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
 
-  // match global theming
-  useEffect(() => {
-    document.body.style.margin = "0";
-    document.body.style.background = "#001f62";
-    document.body.style.fontFamily =
-      'system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", Helvetica, Arial, sans-serif';
-    return () => {
-      document.body.style.background = "";
-      document.body.style.margin = "";
-      document.body.style.fontFamily = "";
-    };
-  }, []);
-
-  const isBookmarked = (postID) => bookmarkedIds.has(postID);
-
+  // ----------------------------------------------------
+  // Load profile (created posts + bookmarks)
+  // ----------------------------------------------------
   const loadProfile = useCallback(async () => {
     if (!isAuthenticated) {
       setLoading(false);
       return;
     }
-
     try {
-      setLoading(true);
-      setError("");
-
       const token = await getAccessTokenSilently();
 
-      // Fetch user row
       const meRes = await fetch(`${API_BASE}/api/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!meRes.ok) {
-        setError("Failed to load profile.");
-        setLoading(false);
-        return;
-      }
-
       const me = await meRes.json();
+      const name =
+        me.handle ||
+        user?.nickname ||
+        user?.username ||
+        (user?.email || "").split("@")[0];
+
+      setDisplayName(name);
 
       const createdIds = JSON.parse(me.created_posts || "[]");
       const bookmarkIds = JSON.parse(me.bookmarks || "[]");
 
       setBookmarkedIds(new Set(bookmarkIds));
 
-      const nameFromRow =
-        me.handle ||
-        user?.nickname ||
-        user?.username ||
-        (user?.email || "").split("@")[0] ||
-        "User";
-
-      setDisplayName(nameFromRow);
-
-      const unionIds = Array.from(new Set([...createdIds, ...bookmarkIds]));
-      if (!unionIds.length) {
+      const unified = Array.from(new Set([...createdIds, ...bookmarkIds]));
+      if (unified.length === 0) {
         setCreatedPosts([]);
         setBookmarkedPosts([]);
         setLoading(false);
         return;
       }
 
-      // Fetch all posts in one go
       const postsRes = await fetch(
-        `${API_BASE}/api/posts/by_ids?ids=${unionIds.join(",")}`
+        `${API_BASE}/api/posts/by_ids?ids=${unified.join(",")}`
       );
-      if (!postsRes.ok) {
-        setError("Failed to load posts for profile.");
-        setLoading(false);
-        return;
-      }
+      const posts = await postsRes.json();
+      const byId = new Map(posts.map((p) => [p.postID, p]));
 
-      const postsData = await postsRes.json();
-      const byId = new Map(
-        postsData.map((p) => [p.postID, p])
-      );
-
-      setCreatedPosts(
-        createdIds
-          .map((id) => byId.get(id))
-          .filter(Boolean)
-      );
-
-      setBookmarkedPosts(
-        bookmarkIds
-          .map((id) => byId.get(id))
-          .filter(Boolean)
-      );
+      setCreatedPosts(createdIds.map((id) => byId.get(id)).filter(Boolean));
+      setBookmarkedPosts(bookmarkIds.map((id) => byId.get(id)).filter(Boolean));
 
       setLoading(false);
-    } catch (err) {
-      console.error("Profile load error", err);
-      setError("Error loading profile.");
+    } catch (e) {
+      console.error("Profile load failed", e);
       setLoading(false);
     }
   }, [isAuthenticated, getAccessTokenSilently, user]);
@@ -123,345 +81,176 @@ export default function UserPage() {
     loadProfile();
   }, [loadProfile]);
 
-  const navigate = (to) => {
-    if (window.location.pathname === to) return;
-    window.history.pushState({}, "", to);
-    window.dispatchEvent(new PopStateEvent("popstate"));
-  };
+  // ----------------------------------------------------
+  // Bookmark toggle (same logic as TopicPage)
+  // ----------------------------------------------------
+  const isBookmarked = (postID) => bookmarkedIds.has(postID);
 
   const toggleBookmark = async (post) => {
-    if (!post || !post.postID) return;
-
     if (!isAuthenticated) {
-      // push them to login
-      await loginWithRedirect({
-        appState: { returnTo: "/userpage" },
-      });
+      await loginWithRedirect({ appState: { returnTo: "/userpage" } });
       return;
     }
-
-    const currentlyBookmarked = isBookmarked(post.postID);
-    const method = currentlyBookmarked ? "DELETE" : "POST";
+    const currently = isBookmarked(post.postID);
+    const method = currently ? "DELETE" : "POST";
 
     try {
       const token = await getAccessTokenSilently();
-      const res = await fetch(
-        `${API_BASE}/api/bookmarks/${post.postID}`,
-        {
-          method,
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      if (!res.ok) return;
-
-      // Update local bookmark ID set
-      setBookmarkedIds((prev) => {
-        const next = new Set(prev);
-        if (currentlyBookmarked) {
-          next.delete(post.postID);
-        } else {
-          next.add(post.postID);
-        }
-        return next;
+      const res = await fetch(`${API_BASE}/api/bookmarks/${post.postID}`, {
+        method,
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      // Refresh lists so "Bookmarks" column updates correctly
+      if (!res.ok) return;
+
+      const newSet = new Set(bookmarkedIds);
+      currently ? newSet.delete(post.postID) : newSet.add(post.postID);
+      setBookmarkedIds(newSet);
+
       loadProfile();
-    } catch (err) {
-      console.error("Bookmark toggle failed", err);
+    } catch (e) {
+      console.error("Bookmark toggle failed:", e);
     }
   };
 
-  const styles = {
-    main: {
-      minHeight: "100vh",
-      padding: "2rem",
-      color: "#fff",
-      position: "relative",
-      paddingBottom: "160px",
-      boxSizing: "border-box",
-    },
-    banner: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "0.5rem 1rem",
-      borderRadius: "8px",
-      marginBottom: "1rem",
-      border: "3px solid red",
-      background: "#0d2fa5",
-    },
-    bannerTitle: {
-      margin: 0,
-      fontSize: "2.4rem",
-      lineHeight: 1,
-      textAlign: "center",
-    },
-    contentCard: {
-      maxWidth: "960px",
-      margin: "3rem auto 0 auto",
-      borderRadius: "12px",
-      padding: "2rem 2.5rem 2.5rem",
-      display: "flex",
-      flexDirection: "column",
-      gap: "2rem",
-      border: "3px solid red",
-      background: "rgba(0,0,0,0.25)",
-    },
-    headersRow: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "flex-end",
-      gap: "2rem",
-    },
-    sectionLabel: {
-      margin: 0,
-      fontSize: "2.0rem",
-      fontWeight: 600,
-      color: "#ff4b4b",
-    },
-    bodyRow: {
-      display: "flex",
-      gap: "3rem",
-      alignItems: "flex-start",
-      flexWrap: "wrap",
-    },
-    postsColumn: {
-      display: "flex",
-      flexDirection: "column",
-      gap: "1.0rem",
-      flex: "0 0 260px",
-    },
-    postCardButton: {
-      background: "#ffffff",
-      color: "#d60000",
-      borderRadius: "10px",
-      padding: "1.0rem 1.2rem",
-      fontSize: "1.1rem",
-      fontWeight: 700,
-      boxShadow: "0 6px 16px rgba(0,0,0,0.45)",
-      textAlign: "center",
-      border: "none",
-      cursor: "pointer",
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      maxWidth: "22ch",
-    },
-    emptyPosts: {
-      color: "rgba(255,255,255,0.75)",
-      fontStyle: "italic",
-      fontSize: "0.95rem",
-    },
-    bookmarksColumn: {
-      flex: 1,
-      minWidth: "260px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "1.0rem",
-    },
-    changeUsernameRow: {
-      display: "flex",
-      justifyContent: "flex-end",
-    },
-    changeUsernameLink: {
-      fontSize: "1.25rem",
-      fontWeight: 700,
-      color: "#ff4b4b",
-      textDecoration: "none",
-      textShadow:
-        "-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff",
-      cursor: "pointer",
-    },
-    bottomLeftButton: {
-      position: "fixed",
-      left: "1rem",
-      bottom: "1rem",
-      padding: "0.6rem 1rem",
-      borderRadius: "10px",
-      border: "none",
-      cursor: "pointer",
-      zIndex: 20,
-      background: "#ffffff",
-      color: "#001f62",
-      fontWeight: 700,
-      boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
-    },
-    footer: {
-      marginTop: "auto",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      paddingTop: "1.5rem",
-      width: "100%",
-      position: "fixed",
-      left: 0,
-      bottom: 0,
-      zIndex: 10,
-      pointerEvents: "none",
-      background:
-        "linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,0.06))",
-    },
-    footerImg: {
-      height: "120px",
-      maxWidth: "95%",
-      width: "auto",
-      objectFit: "contain",
-    },
+  // ----------------------------------------------------
+  // Styles identical to TopicPage
+  // ----------------------------------------------------
+  const postButton = {
+    padding: "0.7rem 1rem",
+    borderRadius: "10px",
+    background: "#ffffff",
+    border: "none",
+    cursor: "pointer",
+    fontWeight: 700,
+    fontSize: "0.95rem",
+    maxWidth: "40ch",
+    minWidth: "12ch",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    textAlign: "center",
+    boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
+    color: "#001f62",
   };
 
-  if (!isAuthenticated) {
-    return (
-      <main style={styles.main}>
-        <nav id="banner" style={styles.banner}>
-          <h2 style={styles.bannerTitle}>Please log in to view your page</h2>
-        </nav>
-
-        <section style={styles.contentCard}>
-          <p>
-            You need to be logged in to see your posts and bookmarks.
-          </p>
-          <button
-            onClick={() =>
-              loginWithRedirect({ appState: { returnTo: "/userpage" } })
-            }
-            style={{
-              padding: "0.8rem 1.4rem",
-              borderRadius: "10px",
-              border: "none",
-              cursor: "pointer",
-              fontWeight: 700,
-              background: "#fff",
-              color: "#001f62",
-              boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
-            }}
-          >
-            Log in
-          </button>
-        </section>
-      </main>
-    );
-  }
-
   return (
-    <main style={styles.main}>
-      {/* Top banner */}
-      <nav id="banner" style={styles.banner}>
-        <h2 style={styles.bannerTitle}>Hello, {displayName}</h2>
-      </nav>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#001f62",
+        border: "3px solid red",
+        boxSizing: "border-box",
+      }}
+    >
+      {/* Header */}
+      <HeaderBar title={`Profile: ${displayName}`} />
 
-      {/* Centered profile content card */}
-      <section style={styles.contentCard}>
-        {loading ? (
-          <p>Loading your posts and bookmarks…</p>
-        ) : error ? (
-          <p style={{ color: "#ffb3b3" }}>{error}</p>
-        ) : (
-          <>
-            <div style={styles.headersRow}>
-              <h3 style={styles.sectionLabel}>Posts</h3>
-              <h3 style={styles.sectionLabel}>Bookmarks</h3>
-            </div>
-
-            <div style={styles.bodyRow}>
-              {/* Created Posts column */}
-              <div style={styles.postsColumn}>
-                {createdPosts.length > 0 ? (
-                  createdPosts.map((post) => {
-                    const title = post.title || "Untitled";
-                    const shortTitle =
-                      title.length > 22
-                        ? title.slice(0, 19) + "..."
-                        : title;
-                    return (
-                      <button
-                        key={post.postID}
-                        style={styles.postCardButton}
-                        onClick={() => {
-                          setSelectedPost(post);
-                          setPostModalOpen(true);
-                        }}
-                        title={title}
-                      >
-                        {shortTitle}
-                      </button>
-                    );
-                  })
-                ) : (
-                  <span style={styles.emptyPosts}>
-                    You have not created any posts yet.
-                  </span>
-                )}
-              </div>
-
-              {/* Bookmarks column */}
-              <div style={styles.bookmarksColumn}>
-                {bookmarkedPosts.length > 0 ? (
-                  bookmarkedPosts.map((post) => {
-                    const title = post.title || "Untitled";
-                    const shortTitle =
-                      title.length > 30
-                        ? title.slice(0, 27) + "..."
-                        : title;
-                    return (
-                      <button
-                        key={post.postID}
-                        style={styles.postCardButton}
-                        onClick={() => {
-                          setSelectedPost(post);
-                          setPostModalOpen(true);
-                        }}
-                        title={title}
-                      >
-                        {shortTitle}
-                      </button>
-                    );
-                  })
-                ) : (
-                  <span style={styles.emptyPosts}>
-                    You have no bookmarked posts yet.
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div style={styles.changeUsernameRow}>
-             <button
-                onClick={() => alert("Username changes coming soon")}
-                style={{
-                  ...styles.changeUsernameLink,
-                  background: "none",
-                  border: "none",
-                  padding: 0,
-                  cursor: "pointer",
-                }}
-                >
-                  Change username
-                </button>
-
-            </div>
-          </>
-        )}
-      </section>
-
-      {/* Bottom-left: back to main menu */}
+      {/* Back button */}
       <button
         onClick={() => navigate("/mainmenu")}
-        style={styles.bottomLeftButton}
+        style={{
+          position: "absolute",
+          left: "1rem",
+          top: "6rem",
+          padding: "0.7rem 1.2rem",
+          borderRadius: "10px",
+          background: "#fff",
+          border: "none",
+          cursor: "pointer",
+          fontWeight: 700,
+          color: "#001f62",
+          boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
+        }}
       >
-        Back to main menu
+        ← Back
       </button>
 
-      {/* Footer banner image */}
-      <footer style={styles.footer}>
-        <img
-          src="/UICBanner.svg"
-          alt="UIC Banner"
-          style={styles.footerImg}
-        />
-      </footer>
+      <main
+        style={{
+          paddingTop: "5.5rem",
+          color: "#fff",
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+      >
+        {/* POSTS LIST */}
+        <div style={{ width: "min(800px, 92vw)" }}>
+          <h2 style={{ textAlign: "center" }}>Your Posts:</h2>
+          {loading ? (
+            <p>Loading…</p>
+          ) : createdPosts.length === 0 ? (
+            <p style={{ textAlign: "center" }}>No posts created.</p>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                gap: "1rem",
+              }}
+            >
+              {createdPosts.map((p) => {
+                const title =
+                  p.title.length > 40 ? p.title.slice(0, 37) + "..." : p.title;
 
-      {/* Post View Modal (same style as TopicPage) */}
+                return (
+                  <button
+                    key={p.postID}
+                    style={postButton}
+                    onClick={() => {
+                      setSelectedPost(p);
+                      setPostModalOpen(true);
+                    }}
+                  >
+                    {title}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* BOOKMARK LIST */}
+        <div style={{ width: "min(800px, 92vw)", marginTop: "3rem" }}>
+          <h2 style={{ textAlign: "center" }}>Bookmarks:</h2>
+
+          {bookmarkedPosts.length === 0 ? (
+            <p style={{ textAlign: "center" }}>No bookmarks yet.</p>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                gap: "1rem",
+              }}
+            >
+              {bookmarkedPosts.map((p) => {
+                const title =
+                  p.title.length > 40 ? p.title.slice(0, 37) + "..." : p.title;
+
+                return (
+                  <button
+                    key={p.postID}
+                    style={postButton}
+                    onClick={() => {
+                      setSelectedPost(p);
+                      setPostModalOpen(true);
+                    }}
+                  >
+                    {title}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* POST VIEW MODAL */}
       {postModalOpen && selectedPost && (
         <div
           style={{
@@ -471,7 +260,7 @@ export default function UserPage() {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            zIndex: 40,
+            zIndex: 20,
           }}
           onClick={() => setPostModalOpen(false)}
         >
@@ -487,7 +276,7 @@ export default function UserPage() {
               color: "#fff",
             }}
           >
-            {/* Title + bookmark star row */}
+            {/* Title + bookmark */}
             <div
               style={{
                 display: "flex",
@@ -496,16 +285,10 @@ export default function UserPage() {
                 marginBottom: "0.75rem",
               }}
             >
-              <h2
-                style={{
-                  margin: 0,
-                  fontSize: "1.5rem",
-                  fontWeight: 800,
-                  color: "#fff",
-                }}
-              >
-                {selectedPost.title || "Untitled"}
+              <h2 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 800 }}>
+                {selectedPost.title}
               </h2>
+
               <button
                 onClick={() => toggleBookmark(selectedPost)}
                 style={{
@@ -517,42 +300,20 @@ export default function UserPage() {
                     ? "#ffd54f"
                     : "#bbbbbb",
                 }}
-                aria-label={
-                  isBookmarked(selectedPost.postID)
-                    ? "Remove bookmark"
-                    : "Bookmark post"
-                }
               >
                 {isBookmarked(selectedPost.postID) ? "★" : "☆"}
               </button>
             </div>
 
-            {/* Meta row */}
-            <div
-              style={{
-                fontSize: "0.9rem",
-                marginBottom: "0.75rem",
-                opacity: 0.9,
-              }}
-            >
-              by{" "}
-              <strong>{selectedPost.handle || "Unknown"}</strong>
-              {selectedPost.created_at && (
-                <>
-                  {" "}
-                  ·{" "}
-                  {new Date(selectedPost.created_at).toLocaleString()}
-                </>
-              )}
+            {/* Meta */}
+            <div style={{ fontSize: "0.9rem", opacity: 0.85 }}>
+              by <strong>{selectedPost.handle}</strong> ·{" "}
+              {new Date(selectedPost.created_at).toLocaleString()}
             </div>
 
-            {/* Body */}
+            {/* Content */}
             <div
-              style={{
-                marginTop: "0.75rem",
-                lineHeight: 1.5,
-                color: "#fff",
-              }}
+              style={{ marginTop: "1rem" }}
               dangerouslySetInnerHTML={{
                 __html: DOMPurify.sanitize(selectedPost.text || ""),
               }}
@@ -560,6 +321,6 @@ export default function UserPage() {
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }

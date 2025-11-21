@@ -4,11 +4,12 @@ import { useAuth0 } from "@auth0/auth0-react";
 import DOMPurify from "dompurify";
 import PostEditor from "../components/PostEditor";
 import HeaderBar from "../components/HeaderBar";
+import { getOrCreateUserKey } from "../utils/userKey";
 
 const API_BASE = "http://localhost:5000";
 
 export default function TopicPage({ topic }) {
-  const { isAuthenticated, getAccessTokenSilently } = useAuth0();
+  const { isAuthenticated, getAccessTokenSilently, user } = useAuth0();
 
   const [posts, setPosts] = useState([]);
   const [title, setTitle] = useState("");
@@ -25,10 +26,21 @@ export default function TopicPage({ topic }) {
 
   const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
 
+  // user key for recent-topics skiplist
+  const [userKey, setUserKey] = useState(null);
+
   const navigate = (to) => {
     window.history.pushState({}, "", to);
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
+
+  // -------------------------------------------------
+  // Build persistent user key (same logic as MainMenu)
+  // -------------------------------------------------
+  useEffect(() => {
+    const key = getOrCreateUserKey(isAuthenticated, user);
+    setUserKey(key);
+  }, [isAuthenticated, user]);
 
   // ---------------------------
   // Fetch posts for this topic
@@ -48,6 +60,27 @@ export default function TopicPage({ topic }) {
   useEffect(() => {
     fetchPosts();
   }, [fetchPosts]);
+
+  // ---------------------------
+  // Record this topic in recents
+  // ---------------------------
+  const recordRecentTopic = useCallback(async () => {
+    if (!userKey || !topic) return;
+
+    try {
+      await fetch(`${API_BASE}/api/recent-topics`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user: userKey, tag: topic }),
+      });
+    } catch (err) {
+      console.error("Failed to record recent topic", err);
+    }
+  }, [userKey, topic]);
+
+  useEffect(() => {
+    recordRecentTopic();
+  }, [recordRecentTopic]);
 
   // ---------------------------
   // Load bookmarks for user
@@ -160,6 +193,8 @@ export default function TopicPage({ topic }) {
       setPostAnon(false);
       setOpen(false);
       fetchPosts();
+      // also re-record in recents on successful post
+      recordRecentTopic();
     } finally {
       setBusy(false);
     }

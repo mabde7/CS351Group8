@@ -96,8 +96,22 @@ export default function MainMenu() {
       }
     };
     document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    return () =>
+      document.removeEventListener("visibilitychange", onVisible);
   }, [userKey, fetchRecent]);
+
+  // Save recent topics to database once they are loaded
+  useEffect(() => {
+    if (isAuthenticated && userKey && recent.length > 0) {
+      fetch(`${API_BASE}/recent-topics/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user: userKey
+        })
+      }).catch(() => {});
+    }
+  }, [recent, isAuthenticated, userKey]);
 
   const starterTopics = ["General", "CS", "Math", "English", "Biology"];
   const topicsToShow = recent.length ? recent : starterTopics;
@@ -134,25 +148,29 @@ export default function MainMenu() {
       <HeaderBar title="Main Menu" />
 
       {/* Profile button top-left, under header */}
-     <button
-        onClick={() => navigate("/userpage")}
+      <button
+        onClick={() => {
+          if (!isAuthenticated) return;
+          navigate("/userpage");
+        }}
+        disabled={!isAuthenticated}
         style={{
           position: "absolute",
           left: "1rem",
-          top: "6rem",   
+          top: "6rem",
           padding: "0.7rem 1.2rem",
           borderRadius: "10px",
           border: "none",
           background: "#ffffff",
           color: "#001f62",
           fontWeight: 700,
-          cursor: "pointer",
+          cursor: isAuthenticated ? "pointer" : "not-allowed",
+          opacity: isAuthenticated ? 1 : 0.4,
           boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
         }}
       >
         Profile
       </button>
-
 
       <h2
         style={{
@@ -179,7 +197,9 @@ export default function MainMenu() {
           <button
             key={t}
             style={topicButtonStyle}
-            onClick={() => navigate(`/topic/${encodeURIComponent(t)}`)}
+            onClick={() =>
+              navigate(`/topic/${encodeURIComponent(t)}`)
+            }
           >
             {t}
           </button>
@@ -232,7 +252,9 @@ export default function MainMenu() {
             <button
               onClick={() =>
                 logout({
-                  logoutParams: { returnTo: window.location.origin },
+                  logoutParams: {
+                    returnTo: window.location.origin,
+                  },
                 })
               }
               style={{
