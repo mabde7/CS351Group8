@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import HeaderBar from '../components/HeaderBar';
 
 export default function HomePage() {
   const { loginWithRedirect, logout, isAuthenticated, user, getAccessTokenSilently } = useAuth0();
@@ -7,8 +8,7 @@ export default function HomePage() {
   useEffect(() => {
     document.body.style.margin = '0';
     document.body.style.background = '#001f62';
-    document.body.style.fontFamily =
-      'system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", Helvetica, Arial, sans-serif';
+    document.body.style.fontFamily = 'system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", Helvetica, Arial, sans-serif';
     return () => {
       document.body.style.background = '';
       document.body.style.margin = '';
@@ -73,103 +73,130 @@ export default function HomePage() {
     navigate('/mainmenu');
   };
 
-  // button style
-  const btn = {
-    padding: '0.9rem 1.5rem',
-    borderRadius: '10px',
+  // Shared button style (matches main menu design language)
+  const primaryBtn = {
+    padding: '1rem 1.6rem',
+    borderRadius: '12px',
     border: 'none',
-    cursor: 'pointer',
-    fontSize: '1.1rem',
-    fontWeight: 600,
     background: '#ffffff',
     color: '#001f62',
-    boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
+    fontWeight: 700,
+    fontSize: '1rem',
+    cursor: 'pointer',
+    boxShadow: '0 5px 14px rgba(0,0,0,0.35)',
   };
   const disabledStyle = isAuthenticated ? { opacity: 0.6, cursor: 'not-allowed' } : {};
 
+  const ctaBtn = {
+    ...primaryBtn,
+    width: 'min(280px, 85vw)',
+    fontSize: '1.1rem',
+  };
+
   return (
-    <main style={{ minHeight: '100vh', padding: '2rem', color: '#fff', display: 'flex', flexDirection: 'column' }}>
-      {/* Header (centered title) */}
-      <header style={{ textAlign: 'center', marginTop: '2rem' }}>
-        <h1 style={{ margin: 0, fontSize: '3rem', lineHeight: 1.2 }}>Welcome to the UIC Wiki Page</h1>
-        <p style={{ opacity: 0.9, marginTop: '0.5rem' }}>Find and share knowledge across UIC topics.</p>
-      </header>
+    <main
+      style={{
+        minHeight: '100vh',
+        margin: 0,
+        padding: 0,
+        background: '#001f62',
+        color: '#fff',
+        border: '3px solid red', // matching main menu border accent
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}
+    >
+      <HeaderBar title="UIC Wiki" />
 
-      {/* Top row: Login/Logout + Signup */}
+      {/* Intro Section */}
+      <section style={{ maxWidth: 900, textAlign: 'center', marginTop: '2.2rem', padding: '0 1rem' }}>
+        <h2 style={{ margin: 0, fontSize: '2.4rem', fontWeight: 800 }}>Welcome</h2>
+        <p style={{ marginTop: '0.75rem', fontSize: '1.05rem', lineHeight: 1.5, opacity: 0.95 }}>
+          Explore topics across the university. Browse as a guest or log in to create and share posts.
+        </p>
+      </section>
+
+      {/* Central Action Buttons */}
       <div
         style={{
-          display: 'flex',
-          gap: '2rem',
-          marginTop: '4rem',
-          justifyContent: 'center',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-        }}
-      >
-        {isAuthenticated ? (
-          <button style={btn} onClick={handleLogout}>
-            Logout
-          </button>
-        ) : (
-          <button style={btn} onClick={handleLogin}>
-            Login
-          </button>
-        )}
-
-        <button
-          style={{ ...btn, ...disabledStyle }}
-          onClick={handleSignup}
-          disabled={isAuthenticated}
-          title={isAuthenticated ? 'Already signed in' : undefined}
-        >
-          Signup
-        </button>
-      </div>
-
-      {/* Bottom area: Guest or Main Menu */}
-      <div
-        style={{
+          marginTop: '3rem',
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.75rem',
-          marginTop: '3rem',
+          gap: '1.2rem',
           alignItems: 'center',
-          justifyContent: 'center',
+          width: '100%',
         }}
       >
         {isAuthenticated ? (
-          <button style={btn} onClick={() => navigate('/mainmenu')}>
-            Main Menu
-          </button>
+          <button style={ctaBtn} onClick={() => navigate('/mainmenu')}>Go to Main Menu</button>
         ) : (
-          <button style={btn} onClick={continueAsGuest}>
-            Continue as Guest
-          </button>
+          <>
+            {/* Top row: Login | Signup */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: '1.2rem',
+                width: 'min(700px, 92vw)',
+              }}
+            >
+              <button style={{ ...ctaBtn, width: '100%' }} onClick={handleLogin}>Login</button>
+              <button
+                style={{ ...ctaBtn, width: '100%', ...disabledStyle }}
+                onClick={handleSignup}
+                disabled={isAuthenticated}
+                title={isAuthenticated ? 'Already signed in' : undefined}
+              >
+                Signup
+              </button>
+            </div>
+            {/* Bottom row: Continue as Guest (centered) */}
+            <button style={ctaBtn} onClick={continueAsGuest}>Continue as Guest</button>
+          </>
         )}
       </div>
 
+      {/* Authenticated greeting */}
       {isAuthenticated && (
         <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-          <p>Welcome back, {user?.nickname || user?.email?.split('@')[0] || 'User'}!</p>
+          <p style={{ fontSize: '1rem', opacity: 0.9 }}>
+            Welcome back, <strong>{user?.nickname || user?.email?.split('@')[0] || 'User'}</strong>!
+          </p>
         </div>
       )}
 
-       {/*Footer banner pinned to bottom*/}
-      <footer
+      {/* Bottom-left: Browse Topics (consistent with main menu) */}
+      <button
+        onClick={() => navigate('/topicPage')}
         style={{
-          marginTop: 'auto',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          paddingTop: '2rem',
+          position: 'fixed',
+          left: '1rem',
+          bottom: '1rem',
+          ...primaryBtn,
         }}
       >
-        <img
-          src="/UICBanner.svg"
-          alt="UIC Banner"
-          style={{ height: '160px', maxWidth: '95%', width: 'auto', objectFit: 'contain' }}
-        />
-      </footer>
+        Browse Topics
+      </button>
+
+      {/* Bottom-right: Login/Logout controls (aligned with main menu pattern) */}
+      <div
+        style={{
+          position: 'fixed',
+          right: '1rem',
+          bottom: '1rem',
+          display: 'flex',
+          gap: '0.8rem',
+          alignItems: 'center',
+        }}
+      >
+        {isAuthenticated ? (
+          <button style={primaryBtn} onClick={handleLogout}>Logout</button>
+        ) : (
+          <button style={primaryBtn} onClick={handleLogin}>Login</button>
+        )}
+      </div>
     </main>
   );
 }
