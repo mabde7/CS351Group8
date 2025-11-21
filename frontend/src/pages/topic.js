@@ -1,55 +1,56 @@
-import React, { useState, useEffect } from "react";
+// frontend/src/pages/topic.js
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import DOMPurify from "dompurify";
-import PostEditor from "../PostEditor";
+import PostEditor from "../components/PostEditor";
+import HeaderBar from "../components/HeaderBar";
 
 export default function TopicPage({ topic }) {
   const { isAuthenticated, getAccessTokenSilently } = useAuth0();
+
   const [posts, setPosts] = useState([]);
   const [title, setTitle] = useState("");
   const [editorContent, setEditorContent] = useState("");
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState(null); // string | null
-
-  function showGuestNotice() {
-    setNotice("Posting is restricted to logged-in users.");
-    setTimeout(() => setNotice(null), 3000);
-  }
-
+  const [notice, setNotice] = useState(null);
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [postModalOpen, setPostModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [postAnon, setPostAnon] = useState(false);
 
   const navigate = (to) => {
-    if (window.location.pathname === to) return;
     window.history.pushState({}, "", to);
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
-  const fetchPosts = async () => {
+  // Load posts
+  const fetchPosts = useCallback(async () => {
     try {
       const res = await fetch(
-        `http://localhost:5000/api/posts?tag=${encodeURIComponent(topic.trim())}`
+        `http://localhost:5000/api/posts?tag=${encodeURIComponent(topic)}`
       );
       const data = await res.json();
       setPosts(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error("GET /api/posts failed", e);
-    }
-  };
+    } catch {}
+  }, [topic]);
 
   useEffect(() => {
-    console.log("Topic value:", `[${topic}]`);
     fetchPosts();
-  }, [topic]);
+  }, [fetchPosts]);
+
+  const filtered = posts.filter((p) =>
+    (p.title || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const quillIsEmpty = (html) =>
     !html || html.replace(/<(.|\n)*?>/g, "").trim().length === 0;
 
+  // Create a new post
   const submitPost = async (e) => {
     e.preventDefault();
-    if (quillIsEmpty(editorContent)) {
-      alert("Write something before posting.");
-      return;
-    }
+    if (quillIsEmpty(editorContent)) return alert("Write something first.");
+
     setBusy(true);
     try {
       const token = await getAccessTokenSilently();
@@ -61,133 +62,332 @@ export default function TopicPage({ topic }) {
         },
         body: JSON.stringify({
           title: title || "Untitled",
-          text: editorContent,      // HTML from React-Quill
-          tags: [topic.trim()],            // important!
+          text: editorContent,
+          tags: [topic],
+          anonymous: postAnon,
         }),
       });
 
       if (!res.ok) {
-        const txt = await res.text();
-        console.error("POST /api/posts failed", res.status, txt);
-        alert(`Post failed (${res.status}): ${txt}`);
+        alert("Post failed.");
         return;
       }
 
-      // success: clear, close, and refetch canonical data
       setTitle("");
       setEditorContent("");
+      setPostAnon(false);
       setOpen(false);
-      await fetchPosts();
-    } catch (err) {
-      console.error(err);
-      alert("Network error posting. Check if the Flask server is running.");
+      fetchPosts();
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <main style={{ color: "#fff", background: "#001f62", minHeight: "100vh", padding: "2rem" }}>
-      {/* Back button */}
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#001f62",
+        border: "3px solid red",
+        boxSizing: "border-box",
+      }}
+    >
+      <HeaderBar title={`Topic – ${topic}`} />
+
+      {/* BACK BUTTON */}
       <button
         onClick={() => navigate("/mainmenu")}
         style={{
-          position: "absolute", left: "1rem", top: "1rem",
-          padding: ".4rem .8rem", borderRadius: 6, border: "none", cursor: "pointer"
+          position: "absolute",
+          left: "1rem",
+          top: "6rem",
+          padding: "0.7rem 1.2rem",
+          borderRadius: "10px",
+          background: "#fff",
+          border: "none",
+          cursor: "pointer",
+          fontWeight: 700,
+          color: "#001f62",
         }}
       >
         ← Back
       </button>
 
-      <h2 style={{ textAlign: "center" }}>Topic – {topic}</h2>
-
-      {/* Actions row */}
-      <div style={{ display: "flex", justifyContent: "flex-end", margin: "1rem 0", position: "relative", zIndex: 1 }}>
-    <button
-      onClick={() => {
-        if (!isAuthenticated) {
-          showGuestNotice();
-          return;
-        }
-        setOpen(true);
-      }}
-    // Don't use the "disabled" attribute—keep it clickable to show the notice.
-      aria-disabled={!isAuthenticated}
-      style={{
-        padding: "0.5rem 0.8rem",
-        borderRadius: 6,
-        border: "none",
-        cursor: isAuthenticated ? "pointer" : "not-allowed",
-        opacity: isAuthenticated ? 1 : 0.5,
-        background: isAuthenticated ? "#e6e6e6" : "#c8c8c8",
-        color: "#000",
-        transition: "opacity .15s ease",
-      }}
-        title={isAuthenticated ? "Create a post" : "Login required to post"}
-  >
-        Make a Post
-      </button>
-    </div>
-
-
-      {/* Posts list */}
-      {posts.length === 0 ? (
-        <p style={{ textAlign: "center", opacity: 0.9 }}>
-          No posts yet for {topic}.
-        </p>
-      ) : (
-        <div style={{ maxWidth: 900, margin: "0 auto", display: "grid", gap: "1rem" }}>
-          {posts.map((p) => (
-            <div key={p.postID} style={{ background: "#0a2b8b", padding: "1rem", borderRadius: 8 }}>
-              <h3 style={{ marginTop: 0 }}>{p.title}</h3>
-              <div
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(p.text) }}
-              />
-              {p.tags?.length ? (
-                <small style={{ opacity: 0.8 }}>Tags: {p.tags.join(", ")}</small>
-              ) : null}
-            </div>
-          ))}
+      {/* MAIN CONTENT */}
+      <main
+        style={{
+          paddingTop: "5.5rem",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          color: "#fff",
+          width: "100%",
+        }}
+      >
+        {/* SEARCH BAR */}
+        <div style={{ width: "min(800px, 92vw)" }}>
+          <h2 style={{ textAlign: "center" }}>Search Posts</h2>
+          <input
+            type="text"
+            placeholder="Search by title…"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "0.8rem",
+              borderRadius: "10px",
+              border: "none",
+            }}
+          />
         </div>
-      )}
 
-      {/* Modal editor */}
-      {open && (
+        {/* POSTS LIST */}
+        <div style={{ width: "min(800px, 92vw)", marginTop: "2rem" }}>
+          <h2 style={{ textAlign: "center" }}>Posts</h2>
+
+          {filtered.length === 0 ? (
+            <p style={{ textAlign: "center" }}>No posts yet.</p>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                gap: "1rem",
+              }}
+            >
+              {filtered.map((p) => (
+                <button
+                  key={p.postID}
+                  style={{
+                    padding: "0.7rem 1rem",
+                    borderRadius: "10px",
+                    background: "#fff",
+                    border: "none",
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    fontSize: "0.95rem",
+                    color: "#001f62",
+                  }}
+                  onClick={() => {
+                    setSelectedPost(p);
+                    setPostModalOpen(true);
+                  }}
+                >
+                  {(p.title || "Untitled").length > 40
+                    ? p.title.slice(0, 37) + "…"
+                    : p.title}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* NEW POST BUTTON */}
+        <button
+          onClick={() => {
+            if (!isAuthenticated) {
+              setNotice("You must log in to post.");
+              setTimeout(() => setNotice(null), 3000);
+              return;
+            }
+            setOpen(true);
+          }}
+          style={{
+            marginTop: "3rem",
+            padding: "1rem 2rem",
+            background: "#fff",
+            color: "#001f62",
+            borderRadius: "10px",
+            border: "none",
+            cursor: "pointer",
+            fontWeight: 700,
+            boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
+          }}
+        >
+          Make a Post
+        </button>
+      </main>
+
+      {/* ====================== */}
+      {/*   POST VIEW MODAL     */}
+      {/* ====================== */}
+      {postModalOpen && selectedPost && (
         <div
           style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
-            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 20,
           }}
-          onClick={() => (busy ? null : setOpen(false))}
+          onClick={() => setPostModalOpen(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              width: "min(680px, 92vw)", background: "#0b2a88", padding: "1rem",
-              borderRadius: 10, boxShadow: "0 10px 30px rgba(0,0,0,.4)"
+              width: "min(850px, 92vw)",
+              background: "#0b2a88",
+              padding: "2rem",
+              borderRadius: "12px",
+              maxHeight: "80vh",
+              overflowY: "auto",
             }}
           >
-            <h3 style={{ marginTop: 0 }}>New post in {topic}</h3>
+            {/* TITLE - BOLD WHITE */}
+            <h2
+              style={{
+                marginTop: 0,
+                color: "#ffffff",
+                fontWeight: 800,
+                fontSize: "1.6rem",
+                textAlign: "center",
+              }}
+            >
+              {selectedPost.title || "Untitled"}
+            </h2>
+
+            {/* METADATA */}
+            <div
+              style={{
+                fontSize: "0.9rem",
+                marginBottom: "0.75rem",
+                opacity: 0.75,
+                color: "#ffffff",
+                textAlign: "center",
+              }}
+            >
+              by <strong>{selectedPost.handle}</strong> ·{" "}
+              {new Date(selectedPost.created_at).toLocaleString()}
+            </div>
+
+            {/* CONTENT - WHITE */}
+            <div
+              style={{
+                background: "rgba(255,255,255,0.1)",
+                padding: "1rem",
+                borderRadius: "10px",
+                color: "#ffffff",
+                fontSize: "1rem",
+                lineHeight: 1.5,
+                whiteSpace: "pre-wrap",
+              }}
+              dangerouslySetInnerHTML={{
+                __html: DOMPurify.sanitize(selectedPost.text || ""),
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ====================== */}
+      {/*   CREATE POST MODAL    */}
+      {/* ====================== */}
+      {open && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.45)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 25,
+          }}
+          onClick={() => (!busy ? setOpen(false) : null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "min(680px, 92vw)",
+              background: "#0b2a88",
+              padding: "1.2rem",
+              borderRadius: 10,
+            }}
+          >
+            <h3 style={{ color: "#fff" }}>New post in {topic}</h3>
+
             <form onSubmit={submitPost}>
               <input
                 type="text"
                 placeholder="Title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                style={{ width: "100%", padding: ".5rem", borderRadius: 6, border: "none", marginBottom: ".75rem" }}
+                style={{
+                  width: "100%",
+                  padding: ".5rem",
+                  borderRadius: 6,
+                  border: "none",
+                  marginBottom: ".5rem",
+                }}
               />
-              <div style={{ background: "#fff", borderRadius: 8, overflow: "hidden" }}>
-                <PostEditor value={editorContent} onChange={setEditorContent} />
+
+              <label
+                style={{
+                  color: "#fff",
+                  display: "flex",
+                  gap: ".4rem",
+                  marginBottom: ".5rem",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={postAnon}
+                  onChange={(e) => setPostAnon(e.target.checked)}
+                />
+                Post anonymously
+              </label>
+
+              <div
+                style={{
+                  background: "#fff",
+                  borderRadius: 8,
+                  overflow: "hidden",
+                }}
+              >
+                <PostEditor
+                  value={editorContent}
+                  onChange={setEditorContent}
+                />
               </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: ".5rem", marginTop: ".75rem" }}>
-                <button type="button" disabled={busy}
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: ".5rem",
+                  marginTop: ".75rem",
+                }}
+              >
+                <button
+                  type="button"
+                  disabled={busy}
                   onClick={() => setOpen(false)}
-                  style={{ padding: ".4rem .8rem", borderRadius: 6, border: "none", cursor: "pointer" }}>
+                  style={{
+                    padding: ".4rem .8rem",
+                    borderRadius: 6,
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
                   Cancel
                 </button>
-                <button type="submit" disabled={busy}
-                  style={{ padding: ".4rem .8rem", borderRadius: 6, border: "none", cursor: "pointer",
-                           background: "#4caf50", color: "#fff" }}>
+
+                <button
+                  type="submit"
+                  disabled={busy}
+                  style={{
+                    padding: ".4rem .9rem",
+                    borderRadius: 6,
+                    border: "none",
+                    background: "#4caf50",
+                    color: "#fff",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
                   {busy ? "Posting…" : "Post"}
                 </button>
               </div>
@@ -196,37 +396,33 @@ export default function TopicPage({ topic }) {
         </div>
       )}
 
-      {/* Guest notice at bottom center */}
+      {/* GUEST TOAST */}
       {notice && (
         <div
           style={{
             position: "fixed",
             left: 0,
             right: 0,
-            bottom: "1.25rem",
-            display: "flex",
-            justifyContent: "center",
+            bottom: "1rem",
+            textAlign: "center",
             zIndex: 30,
-            pointerEvents: "none"
           }}
         >
           <div
             style={{
+              display: "inline-block",
               background: "#fffbe6",
               color: "#3a2a00",
-              border: "1px solid #f0e6b6",
-              borderRadius: 8,
+              border: "1px solid #e6d894",
               padding: ".6rem 1rem",
-              boxShadow: "0 6px 20px rgba(0,0,0,.25)",
-              textAlign: "center",
-              pointerEvents: "auto",
-              maxWidth: "85%"
+              borderRadius: 8,
+              boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
             }}
           >
             {notice}
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }
