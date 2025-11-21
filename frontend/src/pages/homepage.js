@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 
 export default function HomePage() {
-  const { loginWithRedirect, logout, isAuthenticated, user } = useAuth0();
+  const { loginWithRedirect, logout, isAuthenticated, user, getAccessTokenSilently } = useAuth0();
 
   useEffect(() => {
     document.body.style.margin = '0';
@@ -15,6 +15,31 @@ export default function HomePage() {
       document.body.style.fontFamily = '';
     };
   }, []);
+
+    //Auto-register user in backend when logged in
+  useEffect(() => {
+    async function register() {
+      if (!isAuthenticated) return;
+
+      try {
+        const token = await getAccessTokenSilently();
+
+        await fetch("http://localhost:5000/api/register", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        console.log("✓ User registered in backend");
+      } catch (err) {
+        console.error("Register error:", err);
+      }
+    }
+
+    register();
+  }, [isAuthenticated]);
+
 
   // Simple SPA navigation helper using the History API.
   const navigate = (to) => {
