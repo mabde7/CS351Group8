@@ -38,11 +38,15 @@ export default function TopicPage({ topic }) {
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
+  // Build persistent user key (for recent-topics)
   useEffect(() => {
     const key = getOrCreateUserKey(isAuthenticated, user);
     setUserKey(key);
   }, [isAuthenticated, user]);
 
+  // -------------------------------------------------
+  // Fetch posts for this topic (parent sees all descendants)
+  // -------------------------------------------------
   const fetchPosts = useCallback(async () => {
     try {
       const res = await fetch(
@@ -59,6 +63,9 @@ export default function TopicPage({ topic }) {
     fetchPosts();
   }, [fetchPosts]);
 
+  // -------------------------------------------------
+  // Record this topic in recents
+  // -------------------------------------------------
   const recordRecentTopic = useCallback(async () => {
     if (!userKey || !topic) return;
 
@@ -77,7 +84,11 @@ export default function TopicPage({ topic }) {
     recordRecentTopic();
   }, [recordRecentTopic]);
 
+  // -------------------------------------------------
+  // Compute subtags from current posts (for chips under search)
+  // -------------------------------------------------
   useEffect(() => {
+    // Reset leaf filter whenever topic or posts change
     setActiveTagFilter(null);
 
     const allTags = new Set();
@@ -106,6 +117,7 @@ export default function TopicPage({ topic }) {
         .filter(Boolean);
       if (segs.length <= depth) return;
 
+      // Must share prefix with the current topic
       for (let i = 0; i < depth; i++) {
         if (segs[i] !== topicSegs[i]) return;
       }
@@ -124,9 +136,12 @@ export default function TopicPage({ topic }) {
 
     const childList = Object.values(childrenMap);
 
+    // Detect which child paths have descendants (non-leaf)
     childList.forEach((child) => {
       const prefix = child.fullPath + "/";
-      const hasDescendant = tagsArray.some((t) => t.startsWith(prefix));
+      const hasDescendant = tagsArray.some(
+        (t) => t !== child.fullPath && t.startsWith(prefix)
+      );
       child.isLeaf = !hasDescendant;
     });
 
@@ -134,6 +149,9 @@ export default function TopicPage({ topic }) {
     setSubtags(childList);
   }, [posts, topic]);
 
+  // -------------------------------------------------
+  // Load bookmarks for user
+  // -------------------------------------------------
   const loadBookmarks = useCallback(async () => {
     if (!isAuthenticated) {
       setBookmarkedIds(new Set());
@@ -198,9 +216,43 @@ export default function TopicPage({ topic }) {
     }
   };
 
+  // -------------------------------------------------
+  // Tag click behavior in modal:
+  //   - If tag === current topic => ignore
+  //   - If tag has descendants => navigate to its Topic page
+  //   - Else (leaf) => filter posts in this topic by that tag
+  // -------------------------------------------------
+  const tagHasDescendants = (tagPath) => {
+    const prefix = tagPath + "/";
+    // any tag on any post that is strictly deeper
+    return posts.some((p) =>
+      (p.tags || []).some((t) => t !== tagPath && t.startsWith(prefix))
+    );
+  };
+
+  const handleTagClick = (tagPath) => {
+    const cleaned = (tagPath || "").trim();
+    if (!cleaned) return;
+
+    // Never filter by the main topic itself
+    if (cleaned === topic) return;
+
+    if (tagHasDescendants(cleaned)) {
+      // Parent-style tag -> jump to a new TopicPage
+      navigate(`/topic/${encodeURIComponent(cleaned)}`);
+    } else {
+      // Leaf-style tag -> filter within current topic
+      setActiveTagFilter(cleaned);
+    }
+  };
+
+  // -------------------------------------------------
+  // Filtering & helpers
+  // -------------------------------------------------
   const quillIsEmpty = (html) =>
     !html || html.replace(/<(.|\n)*?>/g, "").trim().length === 0;
 
+  // First apply leaf-tag filter (if any), then text search
   const tagFiltered = activeTagFilter
     ? posts.filter((p) => (p.tags || []).includes(activeTagFilter))
     : posts;
@@ -209,6 +261,12 @@ export default function TopicPage({ topic }) {
     (p.title || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // -------------------------------------------------
+  // Submit new post
+  //   - Only send *full* tag paths
+  //   - If user provides customTag, that becomes the full path
+  //   - Otherwise, the current topic itself is used as the tag
+  // -------------------------------------------------
   const submitPost = async (e) => {
     e.preventDefault();
     if (quillIsEmpty(editorContent)) {
@@ -220,9 +278,17 @@ export default function TopicPage({ topic }) {
     try {
       const token = await getAccessTokenSilently();
 
-      const tagsToSend = [];
-      if (topic && topic.trim()) tagsToSend.push(topic.trim());
-      if (customTag && customTag.trim()) tagsToSend.push(customTag.trim());
+      let tagsToSend = [];
+      const trimmedCustom = (customTag || "").trim();
+      const trimmedTopic = (topic || "").trim();
+
+      if (trimmedCustom) {
+        // User provided explicit full path (e.g., "CS/CS315/Lab1")
+        tagsToSend.push(trimmedCustom);
+      } else if (trimmedTopic) {
+        // No extra tag; treat the current topic as the full tag path
+        tagsToSend.push(trimmedTopic);
+      }
 
       const res = await fetch(`${API_BASE}/api/posts`, {
         method: "POST",
@@ -248,6 +314,7 @@ export default function TopicPage({ topic }) {
       setPostAnon(false);
       setCustomTag("");
       setOpen(false);
+
       await fetchPosts();
       recordRecentTopic();
     } finally {
@@ -284,6 +351,7 @@ export default function TopicPage({ topic }) {
     >
       <HeaderBar title={`Topic – ${topic}`} />
 
+      {/* BACK BUTTON */}
       <button
         onClick={() => navigate("/mainmenu")}
         style={{
@@ -312,6 +380,7 @@ export default function TopicPage({ topic }) {
           width: "100%",
         }}
       >
+        {/* SEARCH + SUBTAGS */}
         <div style={{ width: "min(800px, 92vw)" }}>
           <h2 style={{ textAlign: "center" }}>Search Posts</h2>
 
@@ -349,8 +418,10 @@ export default function TopicPage({ topic }) {
                   key={st.fullPath}
                   onClick={() => {
                     if (st.isLeaf) {
+                      // Leaf: filter within current topic
                       setActiveTagFilter(st.fullPath);
                     } else {
+                      // Parent: jump to its topic page
                       navigate(
                         `/topic/${encodeURIComponent(st.fullPath)}`
                       );
@@ -386,8 +457,7 @@ export default function TopicPage({ topic }) {
                 fontSize: "0.85rem",
               }}
             >
-              Filtering by:{" "}
-              <strong>{activeTagFilter}</strong>{" "}
+              Filtering by: <strong>{activeTagFilter}</strong>
               <button
                 type="button"
                 onClick={() => setActiveTagFilter(null)}
@@ -406,6 +476,7 @@ export default function TopicPage({ topic }) {
           )}
         </div>
 
+        {/* POSTS LIST */}
         <div style={{ width: "min(800px, 92vw)", marginTop: "2rem" }}>
           <h2 style={{ textAlign: "center" }}>Posts</h2>
 
@@ -445,6 +516,7 @@ export default function TopicPage({ topic }) {
           )}
         </div>
 
+        {/* NEW POST BUTTON */}
         <button
           onClick={() => {
             if (!isAuthenticated) {
@@ -496,6 +568,7 @@ export default function TopicPage({ topic }) {
               color: "#fff",
             }}
           >
+            {/* Title + bookmark star */}
             <div
               style={{
                 display: "flex",
@@ -535,6 +608,7 @@ export default function TopicPage({ topic }) {
               </button>
             </div>
 
+            {/* Meta row */}
             <div
               style={{
                 fontSize: "0.9rem",
@@ -548,11 +622,58 @@ export default function TopicPage({ topic }) {
                 <>
                   {" "}
                   ·{" "}
-                  {new Date(selectedPost.created_at).toLocaleString()}
+                  {new Date(
+                    selectedPost.created_at
+                  ).toLocaleString()}
                 </>
               )}
             </div>
 
+            {/* Tags row */}
+            {Array.isArray(selectedPost.tags) &&
+              selectedPost.tags.length > 0 && (
+                <div
+                  style={{
+                    marginBottom: "0.75rem",
+                    fontSize: "0.85rem",
+                  }}
+                >
+                  <span style={{ marginRight: "0.4rem" }}>
+                    Tags:
+                  </span>
+                  {selectedPost.tags.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => handleTagClick(tag)}
+                      style={{
+                        display: "inline-block",
+                        marginRight: "0.4rem",
+                        marginBottom: "0.3rem",
+                        padding: "0.2rem 0.6rem",
+                        borderRadius: "999px",
+                        border: "none",
+                        cursor:
+                          tag && tag.trim() === topic
+                            ? "default"
+                            : "pointer",
+                        fontSize: "0.8rem",
+                        fontWeight: 600,
+                        background:
+                          tag && tag.trim() === topic
+                            ? "#bbbbbb"
+                            : "#ffffff",
+                        color: "#001f62",
+                      }}
+                      disabled={tag && tag.trim() === topic}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+            {/* Body */}
             <div
               style={{
                 marginTop: "0.75rem",
@@ -560,7 +681,9 @@ export default function TopicPage({ topic }) {
                 color: "#fff",
               }}
               dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(selectedPost.text || ""),
+                __html: DOMPurify.sanitize(
+                  selectedPost.text || ""
+                ),
               }}
             />
           </div>
@@ -699,6 +822,7 @@ export default function TopicPage({ topic }) {
         </div>
       )}
 
+      {/* Guest Notice */}
       {notice && (
         <div
           style={{
@@ -726,7 +850,7 @@ export default function TopicPage({ topic }) {
         </div>
       )}
 
-      {/* 🔵 Footer Banner (ADDED) */}
+      {/* Footer Banner */}
       <footer
         style={{
           marginTop: "auto",
