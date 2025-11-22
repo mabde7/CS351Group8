@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import HeaderBar from '../components/HeaderBar';
 
 export default function HomePage() {
-  const { loginWithRedirect, logout, isAuthenticated, user } = useAuth0();
+  const { loginWithRedirect, logout, isAuthenticated, user, getAccessTokenSilently } = useAuth0();
 
   useEffect(() => {
     document.body.style.margin = '0';
@@ -16,7 +17,7 @@ export default function HomePage() {
     };
   }, []);
 
-  // Simple SPA navigation helper using the History API.
+  // navigation helper
   const navigate = (to) => {
     if (window.location.pathname === to) return;
     window.history.pushState({}, '', to);
@@ -33,116 +34,111 @@ export default function HomePage() {
       appState: { returnTo: '/mainmenu' },
       authorizationParams: {
         screen_hint: 'signup',
-        prompt: 'login', // force the form even if SSO exists (nice for testing)
+        prompt: 'login',
       },
     });
 
   const handleLogout = () =>
-    logout({
-      logoutParams: { returnTo: window.location.origin },
-      // federated: true, // uncomment if you also want to clear upstream IdP sessions during testing
-    });
+    logout({ logoutParams: { returnTo: window.location.origin } });
 
   const continueAsGuest = () => {
     localStorage.setItem('guest', 'true');
     navigate('/mainmenu');
   };
 
-  // button style
-  const btn = {
-    padding: '0.9rem 1.5rem',
-    borderRadius: '10px',
+  // Shared button style
+  const ctaBtn = {
+    padding: '1.1rem 1.6rem',
+    borderRadius: '12px',
     border: 'none',
-    cursor: 'pointer',
-    fontSize: '1.1rem',
-    fontWeight: 600,
     background: '#ffffff',
     color: '#001f62',
-    boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
+    fontWeight: 700,
+    fontSize: '1.15rem',
+    cursor: 'pointer',
+    width: 'min(420px, 90vw)',
+    boxShadow: '0 6px 16px rgba(0,0,0,0.25)',
   };
-  const disabledStyle = isAuthenticated ? { opacity: 0.6, cursor: 'not-allowed' } : {};
 
   return (
-    <main style={{ minHeight: '100vh', padding: '2rem', color: '#fff', display: 'flex', flexDirection: 'column' }}>
-      {/* Header (centered title) */}
-      <header style={{ textAlign: 'center', marginTop: '2rem' }}>
-        <h1 style={{ margin: 0, fontSize: '3rem', lineHeight: 1.2 }}>Welcome to the UIC Wiki Page</h1>
-        <p style={{ opacity: 0.9, marginTop: '0.5rem' }}>Find and share knowledge across UIC topics.</p>
-      </header>
+    <main
+      style={{
+        minHeight: '100vh',
+        margin: 0,
+        padding: 0,
+        background: '#001f62',
+        color: '#fff',
+        border: '3px solid red',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}
+    >
+      <HeaderBar title="UIC Wiki" />
 
-      {/* Top row: Login/Logout + Signup */}
+      <section style={{ textAlign: 'center', marginTop: '3rem' }}>
+        <h2 style={{ margin: 0, fontSize: '2.6rem', fontWeight: 800 }}>Welcome</h2>
+        <p style={{ marginTop: '1rem', fontSize: '1.1rem', opacity: 0.9, maxWidth: 700 }}>
+          Explore topics across the university. Browse as a guest or log in to create and share posts.
+        </p>
+      </section>
+
+      {/* Central login/signup/guest buttons */}
       <div
         style={{
-          display: 'flex',
-          gap: '2rem',
           marginTop: '4rem',
-          justifyContent: 'center',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-        }}
-      >
-        {isAuthenticated ? (
-          <button style={btn} onClick={handleLogout}>
-            Logout
-          </button>
-        ) : (
-          <button style={btn} onClick={handleLogin}>
-            Login
-          </button>
-        )}
-
-        <button
-          style={{ ...btn, ...disabledStyle }}
-          onClick={handleSignup}
-          disabled={isAuthenticated}
-          title={isAuthenticated ? 'Already signed in' : undefined}
-        >
-          Signup
-        </button>
-      </div>
-
-      {/* Bottom area: Guest or Main Menu */}
-      <div
-        style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.75rem',
-          marginTop: '3rem',
+          gap: '1.6rem',
+          width: '100%',
           alignItems: 'center',
-          justifyContent: 'center',
         }}
       >
         {isAuthenticated ? (
-          <button style={btn} onClick={() => navigate('/mainmenu')}>
-            Main Menu
-          </button>
+          <>
+            <button style={ctaBtn} onClick={() => navigate('/mainmenu')}>
+              Go to Main Menu
+            </button>
+            <button style={ctaBtn} onClick={handleLogout}>
+              Logout
+            </button>
+          </>
         ) : (
-          <button style={btn} onClick={continueAsGuest}>
-            Continue as Guest
-          </button>
+          <>
+            <button style={ctaBtn} onClick={handleLogin}>Login</button>
+            <button style={ctaBtn} onClick={handleSignup}>Signup</button>
+            <button style={ctaBtn} onClick={continueAsGuest}>Continue as Guest</button>
+          </>
         )}
       </div>
 
       {isAuthenticated && (
-        <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-          <p>Welcome back, {user?.nickname || user?.email?.split('@')[0] || 'User'}!</p>
+        <div style={{ marginTop: '1.8rem', textAlign: 'center' }}>
+          <p style={{ fontSize: '1rem', opacity: 0.9 }}>
+            Welcome back, <strong>{user?.nickname || user?.email?.split('@')[0] || 'User'}</strong>!
+          </p>
         </div>
       )}
 
-       {/*Footer banner pinned to bottom*/}
+      {/* Footer banner — always pinned bottom */}
       <footer
         style={{
           marginTop: 'auto',
+          width: '100%',
           display: 'flex',
           justifyContent: 'center',
-          alignItems: 'center',
-          paddingTop: '2rem',
+          padding: '2rem 0',
         }}
       >
         <img
           src="/UICBanner.svg"
           alt="UIC Banner"
-          style={{ height: '160px', maxWidth: '95%', width: 'auto', objectFit: 'contain' }}
+          style={{
+            height: '150px',
+            maxWidth: '95%',
+            width: 'auto',
+            objectFit: 'contain',
+          }}
         />
       </footer>
     </main>

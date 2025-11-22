@@ -1,54 +1,30 @@
 # backend/tags.py
 from flask import Blueprint, jsonify
 from db import get_db
+from tag_trie import TAG_TRIE, rebuild_tag_trie_from_db
 
 tags_bp = Blueprint("tags", __name__)
+
 
 @tags_bp.get("/tags")
 def list_tags():
     """
-    Returns: [{ "tag": "CS377", "count": 12 }, ...]
+    Flat list of tags (full paths) in the system.
+    Used by your Browse Topics page.
     """
     db = get_db()
-    rows = db.execute(
-        """
-        SELECT t.tag, COUNT(pt.postID) AS count
-        FROM tags t
-        LEFT JOIN post_tags pt ON pt.tag = t.tag
-        GROUP BY t.tag
-        ORDER BY count DESC, t.tag ASC
-        """
-    ).fetchall()
-    return jsonify([dict(r) for r in rows])
+    rows = db.execute("SELECT tag FROM tags ORDER BY tag ASC").fetchall()
+    return jsonify([r["tag"] for r in rows]), 200
 
-@tags_bp.get("/tags/<tag>/posts")
-def posts_for_tag(tag):
+
+@tags_bp.get("/tags/tree")
+def tags_tree():
     """
-    Shortcut endpoint to fetch posts for a specific tag.
-    Same shape as GET /api/posts?tag=...
+    Nested hierarchical view of tags based on the trie.
+    Not required for TopicPage (since we infer subtags from posts),
+    but available if you ever want it.
     """
-    db = get_db()
-    rows = db.execute(
-        """
-        SELECT p.*, u.handle
-        FROM posts p
-        JOIN users u ON p.author_sub = u.sub
-        JOIN post_tags pt ON pt.postID = p.postID
-        WHERE pt.tag = ?
-        ORDER BY p.created_at DESC
-        """,
-        (tag,),
-    ).fetchall()
-
-    posts = [dict(r) for r in rows]
-    for p in posts:
-        import json
-        p["links"]  = json.loads(p["links"])
-        p["images"] = json.loads(p["images"])
-        trows = db.execute(
-            "SELECT tag FROM post_tags WHERE postID = ? ORDER BY tag ASC",
-            (p["postID"],),
-        ).fetchall()
-        p["tags"] = [tr["tag"] for tr in trows]
-    return jsonify(posts)
-
+    # Ensure trie is at least populated from DB once
+    rebuild_tag_trie_from_db()
+    tree = TAG_TRIE.to_nested_dict()
+    return jsonify(tree), 200

@@ -1,5 +1,5 @@
-// filepath: /Users/iancarlotrejo/IdeaProjects/CS351Group83/frontend/src/pages/topicPage.js
 import React, { useEffect } from 'react';
+import HeaderBar from '../components/HeaderBar';
 
 export default function TopicBrowse() {
   useEffect(() => {
@@ -21,56 +21,55 @@ export default function TopicBrowse() {
   };
 
   const topics = [
-    { label: 'General', tag: 'General' },
-    { label: 'Events', tag: 'Events' },
-    { label: 'Math', tag: 'Math' },
-    { label: 'CS', tag: 'CS' },
-    { label: 'Biology', tag: 'Biology' },
-    { label: 'Chemistry', tag: 'Chem' },
-    { label: 'English', tag: 'English' },
-    { label: 'History', tag: 'History' },
-    { label: 'Philosophy', tag: 'Philosophy' },
-    { label: 'Career', tag: 'Career' },
+    'General', 'Events', 'Math', 'CS', 'Biology', 'Chem', 'English', 'History', 'Philosophy', 'Career'
   ];
 
-  const btn = {
-    padding: '0.9rem 1.5rem',
+  const topicBtn = {
+    padding: '1rem',
+    width: '100%',
     borderRadius: '10px',
     border: 'none',
-    cursor: 'pointer',
-    fontSize: '1.1rem',
-    fontWeight: 600,
     background: '#ffffff',
     color: '#001f62',
-    boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
-    width: '100%',
+    fontWeight: 700,
+    fontSize: '1.05rem',
+    cursor: 'pointer',
+    boxShadow: '0 5px 14px rgba(0,0,0,0.35)',
   };
 
   return (
-    <main style={{ minHeight: '100vh', padding: '2rem', color: '#fff', display: 'flex', flexDirection: 'column' }}>
-      {/* Top bar with back to main menu */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <button
-          onClick={() => navigate('/mainmenu')}
-          style={{ ...btn, width: 'auto', padding: '0.6rem 1rem' }}
-        >
-          ← Main Menu
-        </button>
-        <div />
-      </div>
+    <main
+      style={{
+        minHeight: '100vh',
+        margin: 0,
+        padding: 0,
+        background: '#001f62',
+        color: '#fff',
+        border: '3px solid red',
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}
+    >
+      <HeaderBar title="Browse Topics" />
 
-      {/* Header */}
-      <header style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-        <h1 style={{ margin: 0, fontSize: '2.6rem', lineHeight: 1.2 }}>Browse Topics</h1>
-        <p style={{ opacity: 0.9, marginTop: '0.5rem' }}>Pick a topic to view or create posts.</p>
-      </header>
+      <section style={{ maxWidth: 900, textAlign: 'center', marginTop: '2.2rem', padding: '0 1rem' }}>
+        <h2 style={{ margin: 0, fontSize: '2.1rem', fontWeight: 800 }}>Pick a Topic</h2>
+        <p style={{ marginTop: '0.75rem', fontSize: '1.02rem', lineHeight: 1.5, opacity: 0.95 }}>
+          Choose a subject area to view existing posts or create new ones.
+        </p>
+      </section>
 
-      {/* Topics grid */}
+      {/* Topic grid */}
       <section
         style={{
-          maxWidth: '1100px',
-          margin: '3rem auto 0',
+          maxWidth: 1100,
           width: '100%',
+          marginTop: '2.8rem',
+          padding: '0 1rem',
+          paddingBottom: '8rem',
+          boxSizing: 'border-box',
         }}
       >
         <div
@@ -80,36 +79,81 @@ export default function TopicBrowse() {
             gap: '1.25rem',
           }}
         >
-          {topics.map((t) => (
+          {topics.map(tag => (
             <button
-              key={t.tag}
-              style={btn}
-              onClick={() => navigate(`/topic/${encodeURIComponent(t.tag)}`)}
-              title={`Open ${t.label}`}
+              key={tag}
+              style={topicBtn}
+              onClick={() => navigate(`/topic/${encodeURIComponent(tag)}`)}
+              title={`Open ${tag}`}
             >
-              {t.label}
+              {tag}
             </button>
           ))}
         </div>
       </section>
 
-      {/* Footer banner pinned to bottom */}
+      {/* Floating buttons */}
+      <button
+        onClick={() => navigate('/mainmenu')}
+        style={{
+          position: 'fixed',
+          left: '1rem',
+          bottom: '1rem',
+          padding: '1rem 1.6rem',
+          borderRadius: '12px',
+          border: 'none',
+          background: '#ffffff',
+          color: '#001f62',
+          fontWeight: 700,
+          fontSize: '1rem',
+          cursor: 'pointer',
+          boxShadow: '0 5px 14px rgba(0,0,0,0.35)',
+        }}
+      >
+        ← Main Menu
+      </button>
+
+      <button
+        onClick={() => navigate('/')}
+        style={{
+          position: 'fixed',
+          right: '1rem',
+          bottom: '1rem',
+          padding: '1rem 1.6rem',
+          borderRadius: '12px',
+          border: 'none',
+          background: '#ffffff',
+          color: '#001f62',
+          fontWeight: 700,
+          fontSize: '1rem',
+          cursor: 'pointer',
+          boxShadow: '0 5px 14px rgba(0,0,0,0.35)',
+        }}
+      >
+        Home
+      </button>
+
+      {/* 🔵 Footer Banner */}
       <footer
         style={{
           marginTop: 'auto',
+          width: '100%',
           display: 'flex',
           justifyContent: 'center',
-          alignItems: 'center',
-          paddingTop: '2rem',
+          padding: '2rem 0',
         }}
       >
         <img
           src="/UICBanner.svg"
           alt="UIC Banner"
-          style={{ height: '140px', maxWidth: '95%', width: 'auto', objectFit: 'contain' }}
+          style={{
+            height: '150px',
+            maxWidth: '95%',
+            width: 'auto',
+            objectFit: 'contain',
+          }}
         />
       </footer>
     </main>
   );
 }
-

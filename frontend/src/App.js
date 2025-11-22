@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 
 import HomePage from './pages/homepage';
-import LoginPage from './pages/login';
 import TopicPage from './pages/topic';
 import MainMenu from './pages/mainmenu';
 import TopicBrowse from './pages/topicPage'; // your "Browse topics" page
@@ -62,7 +61,6 @@ function Router() {
   }, [path, userKey]);
 
   // Routes
-  if (path === '/login') return <LoginPage />;
   if (path === '/mainmenu' || path === '/main') return <MainMenu />;
   if (path === '/topicPage') return <TopicBrowse />;
   if (path === '/userpage') return <UserPage />;

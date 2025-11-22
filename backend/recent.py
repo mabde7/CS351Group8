@@ -3,6 +3,8 @@ from flask import Blueprint, request, jsonify
 import time
 from typing import Dict
 from skiplist import SkipList  # ensure your SkipList is importable as backend/skiplist.py
+import json
+from db import get_db
 
 recent_bp = Blueprint("recent", __name__)
 
@@ -44,7 +46,7 @@ def _get_bucket(user_key: str) -> _PerUserRecents:
         _USERS[user_key] = bucket
     return bucket
 
-@recent_bp.get("/api/recent-topics")
+@recent_bp.get("/recent-topics")
 def recent_list():
     user_key = (request.args.get("user") or "").strip()
     if not user_key:
@@ -52,7 +54,7 @@ def recent_list():
     bucket = _get_bucket(user_key)
     return jsonify({"ok": True, "topics": bucket.list()}), 200
 
-@recent_bp.post("/api/recent-topics")
+@recent_bp.post("/recent-topics")
 def recent_add():
     data = request.get_json(silent=True) or {}
     user_key = (data.get("user") or "").strip()
@@ -62,3 +64,23 @@ def recent_add():
     bucket = _get_bucket(user_key)
     bucket.put(tag)
     return jsonify({"ok": True, "topics": bucket.list()}), 200
+
+@recent_bp.post("/recent-topics/save")
+def save_recents():
+    data = request.get_json(silent=True) or {}
+    user_key = (data.get("user") or "").strip()
+
+    if not user_key:
+        return jsonify({"ok": False, "error": "Missing user"}), 400
+
+    bucket = _get_bucket(user_key)
+    topics = bucket.list()
+
+    db = get_db()
+    db.execute(
+        "UPDATE users SET recent_history = ? WHERE sub = ?",
+        (json.dumps(topics), user_key)
+    )
+    db.commit()
+
+    return jsonify({"ok": True, "saved": topics})
