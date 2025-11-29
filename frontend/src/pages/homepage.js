@@ -7,13 +7,8 @@ export default function HomePage() {
 
   useEffect(() => {
     document.body.style.margin = '0';
-    document.body.style.background = '#001f62';
-    document.body.style.fontFamily =
-      'system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", Helvetica, Arial, sans-serif';
     return () => {
-      document.body.style.background = '';
       document.body.style.margin = '';
-      document.body.style.fontFamily = '';
     };
   }, []);
 
@@ -46,100 +41,145 @@ export default function HomePage() {
     navigate('/mainmenu');
   };
 
-  // Shared button style
-  const ctaBtn = {
-    padding: '1.1rem 1.6rem',
-    borderRadius: '12px',
-    border: 'none',
-    background: '#ffffff',
-    color: '#001f62',
-    fontWeight: 700,
-    fontSize: '1.15rem',
-    cursor: 'pointer',
-    width: 'min(420px, 90vw)',
-    boxShadow: '0 6px 16px rgba(0,0,0,0.25)',
-  };
-
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        margin: 0,
-        padding: 0,
-        background: '#001f62',
-        color: '#fff',
-        border: '3px solid red',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-      }}
-    >
-      <HeaderBar title="UIC Wiki" />
-
-      <section style={{ textAlign: 'center', marginTop: '3rem' }}>
-        <h2 style={{ margin: 0, fontSize: '2.6rem', fontWeight: 800 }}>Welcome</h2>
-        <p style={{ marginTop: '1rem', fontSize: '1.1rem', opacity: 0.9, maxWidth: 700 }}>
-          Explore topics across the university. Browse as a guest or log in to create and share posts.
-        </p>
-      </section>
-
-      {/* Central login/signup/guest buttons */}
-      <div
-        style={{
-          marginTop: '4rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1.6rem',
-          width: '100%',
-          alignItems: 'center',
-        }}
-      >
-        {isAuthenticated ? (
-          <>
-            <button style={ctaBtn} onClick={() => navigate('/mainmenu')}>
-              Go to Main Menu
-            </button>
-            <button style={ctaBtn} onClick={handleLogout}>
-              Logout
-            </button>
-          </>
-        ) : (
-          <>
-            <button style={ctaBtn} onClick={handleLogin}>Login</button>
-            <button style={ctaBtn} onClick={handleSignup}>Signup</button>
-            <button style={ctaBtn} onClick={continueAsGuest}>Continue as Guest</button>
-          </>
-        )}
+    <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
+      <div className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-slate-900/60 bg-slate-900/80 border-b border-slate-800">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <HeaderBar title="UIC Wiki" />
+        </div>
       </div>
 
-      {isAuthenticated && (
-        <div style={{ marginTop: '1.8rem', textAlign: 'center' }}>
-          <p style={{ fontSize: '1rem', opacity: 0.9 }}>
-            Welcome back, <strong>{user?.nickname || user?.email?.split('@')[0] || 'User'}</strong>!
-          </p>
-        </div>
-      )}
+      <section className="relative isolate">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="pt-16 pb-10 sm:pt-20 sm:pb-12 lg:pt-24 lg:pb-16 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            <div className="lg:col-span-7">
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/60 px-3 py-1 text-xs text-slate-300">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <span className="font-medium">Explore, share, and collaborate</span>
+              </div>
+              <h1 className="mt-6 text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-white">Welcome to UIC Wiki</h1>
+              <p className="mt-4 text-base sm:text-lg text-slate-300 max-w-2xl">
+                Discover topics across the university. Browse as a guest or log in to create and share posts with your peers.
+              </p>
+              <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                {isAuthenticated ? (
+                  <>
+                    <button
+                      className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-5 py-3 text-base font-semibold text-white shadow-sm shadow-emerald-500/30 ring-1 ring-inset ring-emerald-400 hover:bg-emerald-600 transition"
+                      onClick={() => navigate('/mainmenu')}
+                    >
+                      Go to Main Menu
+                    </button>
+                    <button
+                      className="inline-flex items-center justify-center rounded-lg bg-slate-700 px-5 py-3 text-base font-semibold text-white shadow-sm ring-1 ring-inset ring-slate-600 hover:bg-slate-600 transition"
+                      onClick={handleLogout}
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-5 py-3 text-base font-semibold text-white shadow-sm shadow-emerald-500/30 ring-1 ring-inset ring-emerald-400 hover:bg-emerald-600 transition"
+                      onClick={handleLogin}
+                    >
+                      Login
+                    </button>
+                    <button
+                      className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-base font-semibold text-white shadow-sm ring-1 ring-inset ring-blue-500 hover:bg-blue-700 transition"
+                      onClick={handleSignup}
+                    >
+                      Signup
+                    </button>
+                    <button
+                      className="inline-flex items-center justify-center rounded-lg bg-slate-700 px-5 py-3 text-base font-semibold text-white shadow-sm ring-1 ring-inset ring-slate-600 hover:bg-slate-600 transition"
+                      onClick={continueAsGuest}
+                    >
+                      Continue as Guest
+                    </button>
+                  </>
+                )}
+              </div>
+              {isAuthenticated && (
+                <p className="mt-4 text-sm text-slate-300">
+                  Welcome back, <span className="font-semibold text-white">{user?.nickname || user?.email?.split('@')[0] || 'User'}</span>!
+                </p>
+              )}
+            </div>
 
-      {/* Footer banner — always pinned bottom */}
-      <footer
-        style={{
-          marginTop: 'auto',
-          width: '100%',
-          display: 'flex',
-          justifyContent: 'center',
-          padding: '2rem 0',
-        }}
-      >
-        <img
-          src="/UICBanner.svg"
-          alt="UIC Banner"
-          style={{
-            height: '150px',
-            maxWidth: '95%',
-            width: 'auto',
-            objectFit: 'contain',
-          }}
-        />
+            <div className="lg:col-span-5 relative">
+              <div className="relative overflow-hidden rounded-2xl border border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 p-6 shadow-xl">
+                <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_left,rgba(56,189,248,0.12),transparent_40%),radial-gradient(ellipse_at_bottom_right,rgba(16,185,129,0.12),transparent_40%)]" />
+                <img
+                  src="/UICBanner.svg"
+                  alt="UIC Banner"
+                  className="mx-auto h-32 w-auto object-contain opacity-90"
+                />
+                <div className="mt-6 grid grid-cols-3 gap-3 text-center">
+                  <div className="rounded-lg bg-slate-800/60 p-4 border border-slate-700">
+                    <p className="text-sm text-slate-300">Create</p>
+                    <p className="mt-1 text-xl font-bold text-white">Posts</p>
+                  </div>
+                  <div className="rounded-lg bg-slate-800/60 p-4 border border-slate-700">
+                    <p className="text-sm text-slate-300">Browse</p>
+                    <p className="mt-1 text-xl font-bold text-white">Topics</p>
+                  </div>
+                  <div className="rounded-lg bg-slate-800/60 p-4 border border-slate-700">
+                    <p className="text-sm text-slate-300">Connect with</p>
+                    <p className="mt-1 text-xl font-bold text-white">Peers</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-slate-800 bg-slate-900/60">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="rounded-xl border border-slate-800 bg-slate-800/60 p-6">
+              <h3 className="text-lg font-semibold text-white">Discover</h3>
+              <p className="mt-2 text-sm text-slate-300">
+                Find posts by tags and recent activity from the community.
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-800/60 p-6">
+              <h3 className="text-lg font-semibold text-white">Contribute</h3>
+              <p className="mt-2 text-sm text-slate-300">
+                Create posts to share knowledge and help fellow students.
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-800/60 p-6">
+              <h3 className="text-lg font-semibold text-white">Collaborate</h3>
+              <p className="mt-2 text-sm text-slate-300">
+                Engage with peers and build a shared resource for UIC.
+              </p>
+            </div>
+          </div>
+          <div className="mt-10 flex flex-col sm:flex-row items-center gap-3">
+            <button
+              className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-5 py-3 text-base font-semibold text-white shadow-sm shadow-emerald-500/30 ring-1 ring-inset ring-emerald-400 hover:bg-emerald-600 transition"
+              onClick={() => navigate('/mainmenu')}
+            >
+              Explore the Wiki
+            </button>
+            {!isAuthenticated && (
+              <button
+                className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-base font-semibold text-white shadow-sm ring-1 ring-inset ring-blue-500 hover:bg-blue-700 transition"
+                onClick={handleSignup}
+              >
+                Create an Account
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t border-slate-800">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 text-center text-slate-400">
+          <p className="text-sm">© {new Date().getFullYear()} UIC Wiki. All rights reserved.</p>
+        </div>
       </footer>
     </main>
   );

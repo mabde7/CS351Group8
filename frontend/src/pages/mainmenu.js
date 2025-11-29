@@ -1,10 +1,5 @@
 // frontend/src/pages/mainmenu.js
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-  useCallback,
-} from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { getOrCreateUserKey } from "../utils/userKey";
 import HeaderBar from "../components/HeaderBar";
@@ -116,139 +111,65 @@ export default function MainMenu() {
   const starterTopics = ["General", "CS", "Math", "English", "Biology"];
   const topicsToShow = recent.length ? recent : starterTopics;
 
-  const topicButtonStyle = {
-    padding: "1rem",
-    width: "min(330px, 85vw)",
-    borderRadius: "10px",
-    border: "none",
-    background: "#ffffff",
-    color: "#001f62",
-    fontWeight: 700,
-    fontSize: "1.1rem",
-    cursor: "pointer",
-    boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
-  };
-
+  // Modern Tailwind-based UI
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        margin: 0,
-        padding: 0,
-        background: "#001f62",
-        color: "#fff",
-        border: "3px solid red",
-        boxSizing: "border-box",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-      }}
-    >
-      {/* Fixed header bar */}
-      <HeaderBar title="Main Menu" />
-
-      {/* Profile button top-left, under header */}
-      <button
-        onClick={() => {
-          if (!isAuthenticated) return;
-          navigate("/userpage");
-        }}
-        disabled={!isAuthenticated}
-        style={{
-          position: "absolute",
-          left: "1rem",
-          top: "6rem",
-          padding: "0.7rem 1.2rem",
-          borderRadius: "10px",
-          border: "none",
-          background: "#ffffff",
-          color: "#001f62",
-          fontWeight: 700,
-          cursor: isAuthenticated ? "pointer" : "not-allowed",
-          opacity: isAuthenticated ? 1 : 0.4,
-          boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
-        }}
-      >
-        Profile
-      </button>
-
-      <h2
-        style={{
-          marginTop: "1.5rem",
-          fontSize: "2rem",
-          fontWeight: 700,
-          textAlign: "center",
-        }}
-      >
-        {recent.length ? "Recent Topics" : "Pick a Topic"}
-      </h2>
-
-      <div
-        style={{
-          marginTop: "2rem",
-          display: "flex",
-          flexDirection: "column",
-          gap: "1.2rem",
-          alignItems: "center",
-          width: "100%",
-        }}
-      >
-        {topicsToShow.map((t) => (
-          <button
-            key={t}
-            style={topicButtonStyle}
-            onClick={() =>
-              navigate(`/topic/${encodeURIComponent(t)}`)
-            }
-          >
-            {t}
-          </button>
-        ))}
+    <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
+      <div className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-slate-900/60 bg-slate-900/80 border-b border-slate-800">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <HeaderBar title="Main Menu" />
+        </div>
       </div>
 
-      {/* Bottom-left: Browse Topics */}
-      <button
-        onClick={() => navigate("/topicPage")}
-        style={{
-          position: "fixed",
-          left: "1rem",
-          bottom: "1rem",
-          padding: "1rem 1.6rem",
-          borderRadius: "12px",
-          border: "none",
-          background: "#ffffff",
-          color: "#001f62",
-          cursor: "pointer",
-          fontWeight: 700,
-          fontSize: "1rem",
-          boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
-        }}
-      >
-        Browse Topics
-      </button>
-
-      {/* Bottom-right: auth controls */}
-      <div
-        style={{
-          position: "fixed",
-          right: "1rem",
-          bottom: "1rem",
-          display: "flex",
-          gap: "0.8rem",
-          alignItems: "center",
-        }}
-      >
-        {!isAuthenticated && isGuestBanner && (
-          <span style={{ color: "#fff", fontSize: "0.95rem" }}>
-            Browsing as <strong>Guest</strong>
-          </span>
-        )}
-
-        {isAuthenticated ? (
-          <>
-            <span style={{ color: "#fff", fontSize: "0.95rem" }}>
-              Hi, {handle}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="pt-10 sm:pt-12">
+          <div className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/60 px-3 py-1 text-xs text-slate-300">
+            <span className="h-2 w-2 rounded-full bg-sky-400" />
+            <span className="font-medium">
+              Pick a topic or continue browsing
             </span>
+          </div>
+          <h1 className="mt-6 text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl text-white">
+            {recent.length ? "Recent Topics" : "Pick a Topic"}
+          </h1>
+          {isAuthenticated ? (
+            <p className="mt-2 text-slate-300">
+              Hi,{" "}
+              <span className="font-semibold text-white">{handle}</span>
+            </p>
+          ) : (
+            isGuestBanner && (
+              <p className="mt-2 text-slate-300">
+                Browsing as{" "}
+                <span className="font-semibold text-white">Guest</span>
+              </p>
+            )
+          )}
+        </div>
+
+        <div className="mt-8 mx-auto max-w-sm w-full grid grid-cols-1 gap-4 justify-items-center">
+          {topicsToShow.map((t) => (
+            <button
+              key={t}
+              onClick={() => navigate(`/topic/${encodeURIComponent(t)}`)}
+              className="w-full rounded-xl bg-white/95 text-[#001f62] font-semibold px-5 py-4 shadow-lg ring-1 ring-slate-200 hover:bg-white transition flex items-center justify-between"
+            >
+              <span>{t}</span>
+              <span className="ml-3 inline-block rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700">
+                Open
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-10 flex flex-col sm:flex-row items-center gap-3 justify-center">
+          <button
+            onClick={() => navigate("/topicPage")}
+            className="inline-flex items-center justify-center rounded-lg bg-white px-5 py-3 text-base font-semibold text-[#001f62] shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 transition"
+          >
+            Browse Topics
+          </button>
+
+          {isAuthenticated ? (
             <button
               onClick={() =>
                 logout({
@@ -257,61 +178,29 @@ export default function MainMenu() {
                   },
                 })
               }
-              style={{
-                padding: "1rem 1.6rem",
-                borderRadius: "12px",
-                border: "none",
-                background: "#ffffff",
-                cursor: "pointer",
-                color: "#001f62",
-                fontWeight: 700,
-                fontSize: "1rem",
-                boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
-              }}
+              className="inline-flex items-center justify-center rounded-lg bg-white px-5 py-3 text-base font-semibold text-[#001f62] shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 transition"
             >
               Logout
             </button>
-          </>
-        ) : (
-          <button
-            onClick={() => navigate("/login")}
-            style={{
-              padding: "1rem 1.6rem",
-              borderRadius: "12px",
-              border: "none",
-              background: "#ffffff",
-              cursor: "pointer",
-              color: "#001f62",
-              fontWeight: 700,
-              fontSize: "1rem",
-              boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
-            }}
-          >
-            Login
-          </button>
-        )}
-      </div>
+          ) : (
+            <button
+              onClick={() => navigate("/login")}
+              className="inline-flex items-center justify-center rounded-lg bg-white px-5 py-3 text-base font-semibold text-[#001f62] shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 transition"
+            >
+              Login
+            </button>
+          )}
+        </div>
+      </section>
 
-      {/* 🔵 Footer Banner */}
-      <footer
-        style={{
-          marginTop: "auto",
-          width: "100%",
-          display: "flex",
-          justifyContent: "center",
-          padding: "2rem 0",
-        }}
-      >
-        <img
-          src="/UICBanner.svg"
-          alt="UIC Banner"
-          style={{
-            height: "150px",
-            maxWidth: "95%",
-            width: "auto",
-            objectFit: "contain",
-          }}
-        />
+      <footer className="mt-16 border-t border-slate-800">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 text-center">
+          <img
+            src="/UICBanner.svg"
+            alt="UIC Banner"
+            className="mx-auto h-24 w-auto object-contain opacity-90"
+          />
+        </div>
       </footer>
     </main>
   );
