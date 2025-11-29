@@ -1,5 +1,4 @@
 
-
 export function getOrCreateUserKey(isAuthenticated, user) {
   if (isAuthenticated && user?.sub) return user.sub;
   let gid = localStorage.getItem("guestId");

@@ -1,4 +1,4 @@
-// frontend/src/components/HeaderBar.js
+// OLD-frontend/src/components/HeaderBar.js
 import React from "react";
 
 export default function HeaderBar({ title }) {

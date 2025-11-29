@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import HeaderBar from '../components/HeaderBar';
+import HeaderBar from '../../components/HeaderBar';
 
 export default function TopicBrowse() {
   useEffect(() => {

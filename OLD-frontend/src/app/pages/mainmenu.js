@@ -1,4 +1,4 @@
-// frontend/src/pages/mainmenu.js
+// OLD-frontend/src/pages/mainmenu.js
 import React, {
   useEffect,
   useMemo,
@@ -6,8 +6,8 @@ import React, {
   useCallback,
 } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
-import { getOrCreateUserKey } from "../utils/userKey";
-import HeaderBar from "../components/HeaderBar";
+import { getOrCreateUserKey } from "../../utils/userKey";
+import HeaderBar from "../../components/HeaderBar";
 
 const API_BASE = "http://localhost:5000/api";
 

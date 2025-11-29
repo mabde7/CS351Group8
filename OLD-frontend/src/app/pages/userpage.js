@@ -1,8 +1,8 @@
-// frontend/src/pages/userpage.js
+// OLD-frontend/src/pages/userpage.js
 import React, { useEffect, useState, useCallback } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import DOMPurify from "dompurify";
-import HeaderBar from "../components/HeaderBar";
+import HeaderBar from "../../components/HeaderBar";
 
 const API_BASE = "http://localhost:5000";
 

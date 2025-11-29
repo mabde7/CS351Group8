@@ -1,13 +1,13 @@
-// frontend/src/App.js
+// OLD-frontend/src/App.js
 import './App.css';
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 
-import HomePage from './pages/homepage';
-import TopicPage from './pages/topic';
-import MainMenu from './pages/mainmenu';
-import TopicBrowse from './pages/topicPage'; // your "Browse topics" page
-import UserPage from './pages/userpage';
+import HomePage from '@/app/pages/homepage';
+import TopicPage from '@/app/pages/topic';
+import MainMenu from '@/app/pages/mainmenu';
+import TopicBrowse from '@/app/pages/topicPage'; // your "Browse topics" page
+import UserPage from '@/app/pages/userpage';
 import { getOrCreateUserKey } from './utils/userKey';
 
 const API_BASE = "http://localhost:5000"; // adjust if needed

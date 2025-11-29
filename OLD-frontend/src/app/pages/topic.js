@@ -1,10 +1,10 @@
-// frontend/src/pages/topic.js
+// OLD-frontend/src/pages/topic.js
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import DOMPurify from "dompurify";
-import PostEditor from "../components/PostEditor";
-import HeaderBar from "../components/HeaderBar";
-import { getOrCreateUserKey } from "../utils/userKey";
+import PostEditor from "../../components/PostEditor";
+import HeaderBar from "../../components/HeaderBar";
+import { getOrCreateUserKey } from "../../utils/userKey";
 
 const API_BASE = "http://localhost:5000";
 
