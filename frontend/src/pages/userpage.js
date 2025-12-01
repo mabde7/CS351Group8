@@ -113,214 +113,135 @@ export default function UserPage() {
     }
   };
 
-  // ----------------------------------------------------
-  // Styles identical to TopicPage
-  // ----------------------------------------------------
-  const postButton = {
-    padding: "0.7rem 1rem",
-    borderRadius: "10px",
-    background: "#ffffff",
-    border: "none",
-    cursor: "pointer",
-    fontWeight: 700,
-    fontSize: "0.95rem",
-    maxWidth: "40ch",
-    minWidth: "12ch",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    textAlign: "center",
-    boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
-    color: "#001f62",
-  };
-
+  // Modern Tailwind UI replacing legacy inline styles
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#001f62",
-        border: "3px solid red",
-        boxSizing: "border-box",
-      }}
-    >
-      {/* Header */}
-      <HeaderBar title={`Profile: ${displayName}`} />
+    <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
+      {/* Sticky header */}
+      <div className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-slate-900/60 bg-slate-900/80 border-b border-slate-800">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <HeaderBar title={`Profile: ${displayName || 'User'}`} />
+        </div>
+      </div>
 
       {/* Back button */}
-      <button
-        onClick={() => navigate("/mainmenu")}
-        style={{
-          position: "absolute",
-          left: "1rem",
-          top: "6rem",
-          padding: "0.7rem 1.2rem",
-          borderRadius: "10px",
-          background: "#fff",
-          border: "none",
-          cursor: "pointer",
-          fontWeight: 700,
-          color: "#001f62",
-          boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
-        }}
-      >
-        ← Back
-      </button>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6">
+        <button
+          onClick={() => navigate('/mainmenu')}
+          className="inline-flex items-center rounded-lg bg-white px-4 py-2 text-sm font-semibold text-[#001f62] shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 transition"
+        >
+          ← Back
+        </button>
+      </div>
 
-      <main
-        style={{
-          paddingTop: "5.5rem",
-          color: "#fff",
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-        }}
-      >
-        {/* POSTS LIST */}
-        <div style={{ width: "min(800px, 92vw)" }}>
-          <h2 style={{ textAlign: "center" }}>Your Posts:</h2>
-          {loading ? (
-            <p>Loading…</p>
-          ) : createdPosts.length === 0 ? (
-            <p style={{ textAlign: "center" }}>No posts created.</p>
-          ) : (
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                justifyContent: "center",
-                gap: "1rem",
-              }}
-            >
-              {createdPosts.map((p) => {
-                const title =
-                  p.title.length > 40 ? p.title.slice(0, 37) + "..." : p.title;
-
-                return (
-                  <button
-                    key={p.postID}
-                    style={postButton}
-                    onClick={() => {
-                      setSelectedPost(p);
-                      setPostModalOpen(true);
-                    }}
-                  >
-                    {title}
-                  </button>
-                );
-              })}
+      {/* Content */}
+      <section className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex flex-col gap-12">
+          {/* Created Posts */}
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/60 px-3 py-1 text-xs text-slate-300">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="font-medium">Your Posts</span>
             </div>
-          )}
-        </div>
+            <h2 className="mt-4 text-2xl font-extrabold tracking-tight text-white text-center">Created Posts</h2>
+            {loading ? (
+              <p className="mt-4 text-center text-slate-300">Loading…</p>
+            ) : createdPosts.length === 0 ? (
+              <p className="mt-4 text-center text-slate-400">No posts created.</p>
+            ) : (
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {createdPosts.map((p) => {
+                  const rawTitle = p.title || 'Untitled';
+                  const title = rawTitle.length > 40 ? rawTitle.slice(0, 37) + '…' : rawTitle;
+                  return (
+                    <button
+                      key={p.postID}
+                      onClick={() => { setSelectedPost(p); setPostModalOpen(true); }}
+                      title={rawTitle}
+                      className="group relative w-full rounded-xl bg-white/95 text-[#001f62] font-semibold px-5 py-4 shadow-lg ring-1 ring-slate-200 hover:bg-white transition text-left"
+                    >
+                      <span className="block truncate pr-8">{title}</span>
+                      <span className="pointer-events-none absolute inset-0 rounded-xl ring-0 group-hover:ring-2 group-hover:ring-emerald-400/60 transition" />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
-        {/* BOOKMARK LIST */}
-        <div style={{ width: "min(800px, 92vw)", marginTop: "3rem" }}>
-          <h2 style={{ textAlign: "center" }}>Bookmarks:</h2>
-
-          {bookmarkedPosts.length === 0 ? (
-            <p style={{ textAlign: "center" }}>No bookmarks yet.</p>
-          ) : (
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                justifyContent: "center",
-                gap: "1rem",
-              }}
-            >
-              {bookmarkedPosts.map((p) => {
-                const title =
-                  p.title.length > 40 ? p.title.slice(0, 37) + "..." : p.title;
-
-                return (
-                  <button
-                    key={p.postID}
-                    style={postButton}
-                    onClick={() => {
-                      setSelectedPost(p);
-                      setPostModalOpen(true);
-                    }}
-                  >
-                    {title}
-                  </button>
-                );
-              })}
+          {/* Bookmarks */}
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/60 px-3 py-1 text-xs text-slate-300">
+              <span className="h-2 w-2 rounded-full bg-amber-400" />
+              <span className="font-medium">Your Bookmarks</span>
             </div>
-          )}
+            <h2 className="mt-4 text-2xl font-extrabold tracking-tight text-white text-center">Bookmarks</h2>
+            {bookmarkedPosts.length === 0 ? (
+              <p className="mt-4 text-center text-slate-400">No bookmarks yet.</p>
+            ) : (
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {bookmarkedPosts.map((p) => {
+                  const rawTitle = p.title || 'Untitled';
+                  const title = rawTitle.length > 40 ? rawTitle.slice(0, 37) + '…' : rawTitle;
+                  return (
+                    <button
+                      key={p.postID}
+                      onClick={() => { setSelectedPost(p); setPostModalOpen(true); }}
+                      title={rawTitle}
+                      className="group relative w-full rounded-xl bg-white/95 text-[#001f62] font-semibold px-5 py-4 shadow-lg ring-1 ring-slate-200 hover:bg-white transition text-left"
+                    >
+                      <span className="block truncate pr-8">{title}</span>
+                      <span className="pointer-events-none absolute inset-0 rounded-xl ring-0 group-hover:ring-2 group-hover:ring-amber-400/60 transition" />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
-      </main>
+      </section>
 
-      {/* POST VIEW MODAL */}
+      {/* Post view modal */}
       {postModalOpen && selectedPost && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.6)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 20,
-          }}
+          className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center px-4"
           onClick={() => setPostModalOpen(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{
-              width: "min(850px, 92vw)",
-              background: "#0b2a88",
-              padding: "2rem",
-              borderRadius: "12px",
-              maxHeight: "80vh",
-              overflowY: "auto",
-              color: "#fff",
-            }}
+            className="w-full max-w-3xl rounded-2xl border border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 p-6 shadow-xl text-slate-100 max-h-[80vh] overflow-y-auto"
           >
-            {/* Title + bookmark */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "0.75rem",
-              }}
-            >
-              <h2 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 800 }}>
-                {selectedPost.title}
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="m-0 text-2xl font-extrabold text-white">
+                {selectedPost.title || 'Untitled'}
               </h2>
-
               <button
                 onClick={() => toggleBookmark(selectedPost)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: "1.8rem",
-                  color: isBookmarked(selectedPost.postID)
-                    ? "#ffd54f"
-                    : "#bbbbbb",
-                }}
+                className={`text-2xl transition ${isBookmarked(selectedPost.postID) ? 'text-amber-400' : 'text-slate-400 hover:text-slate-200'}`}
+                aria-label={isBookmarked(selectedPost.postID) ? 'Remove bookmark' : 'Bookmark post'}
               >
-                {isBookmarked(selectedPost.postID) ? "★" : "☆"}
+                {isBookmarked(selectedPost.postID) ? '★' : '☆'}
               </button>
             </div>
-
-            {/* Meta */}
-            <div style={{ fontSize: "0.9rem", opacity: 0.85 }}>
-              by <strong>{selectedPost.handle}</strong> ·{" "}
-              {new Date(selectedPost.created_at).toLocaleString()}
+            <div className="text-sm mb-3 text-slate-300">
+              by <strong className="text-white">{selectedPost.handle || 'Unknown'}</strong>
+              {selectedPost.created_at && (
+                <> {' '}·{' '}{new Date(selectedPost.created_at).toLocaleString()} </>
+              )}
             </div>
-
-            {/* Content */}
             <div
-              style={{ marginTop: "1rem" }}
-              dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(selectedPost.text || ""),
-              }}
+              className="mt-3 leading-relaxed text-slate-100"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedPost.text || '') }}
             />
           </div>
         </div>
       )}
-    </div>
+
+      {/* Footer */}
+      <footer className="mt-16 border-t border-slate-800">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 text-center">
+          <img src="/UICBanner.svg" alt="UIC Banner" className="mx-auto h-24 w-auto object-contain opacity-90" />
+        </div>
+      </footer>
+    </main>
   );
 }

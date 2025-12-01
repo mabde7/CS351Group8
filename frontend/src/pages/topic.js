@@ -322,153 +322,76 @@ export default function TopicPage({ topic }) {
     }
   };
 
-  const postButtonStyle = {
-    padding: "0.7rem 1rem",
-    borderRadius: "10px",
-    background: "#ffffff",
-    border: "none",
-    cursor: "pointer",
-    fontWeight: 700,
-    fontSize: "0.95rem",
-    maxWidth: "40ch",
-    minWidth: "12ch",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    textAlign: "center",
-    boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
-  };
-
+  // Modernized UI (Tailwind CSS) while preserving functionality
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#001f62",
-        border: "3px solid red",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <HeaderBar title={`Topic – ${topic}`} />
+    <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
+      <div className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-slate-900/60 bg-slate-900/80 border-b border-slate-800">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <HeaderBar title={`Topic – ${topic}`} />
+        </div>
+      </div>
 
-      {/* BACK BUTTON */}
-      <button
-        onClick={() => navigate("/mainmenu")}
-        style={{
-          position: "absolute",
-          left: "1rem",
-          top: "6rem",
-          padding: "0.7rem 1.2rem",
-          borderRadius: "10px",
-          background: "#fff",
-          border: "none",
-          cursor: "pointer",
-          fontWeight: 700,
-          color: "#001f62",
-        }}
-      >
-        ← Back
-      </button>
+      {/* Back button */}
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 pt-6">
+        <button
+          onClick={() => navigate('/mainmenu')}
+          className="inline-flex items-center rounded-lg bg-white px-4 py-2 text-sm font-semibold text-[#001f62] shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 transition"
+        >
+          ← Back
+        </button>
+      </div>
 
-      <main
-        style={{
-          paddingTop: "5.5rem",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          color: "#fff",
-          width: "100%",
-        }}
-      >
-        {/* SEARCH + SUBTAGS */}
-        <div style={{ width: "min(800px, 92vw)" }}>
-          <h2 style={{ textAlign: "center" }}>Search Posts</h2>
+      <section className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-6">
+        {/* Search + Subtags */}
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/60 px-3 py-1 text-xs text-slate-300">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            <span className="font-medium">Search Posts</span>
+          </div>
+          <h2 className="mt-4 text-2xl font-extrabold tracking-tight text-white">Find posts in {topic}</h2>
 
           <input
             type="text"
             placeholder="Search by title…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "0.8rem",
-              borderRadius: "10px",
-              border: "none",
-            }}
+            className="mt-4 w-full rounded-lg border border-slate-700/60 bg-white/95 px-4 py-2 text-slate-900 placeholder-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
 
           {subtags.length > 0 && (
-            <div
-              style={{
-                marginTop: "0.7rem",
-                padding: "0.5rem 0.75rem",
-                borderRadius: "10px",
-                background: "#132b82",
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "0.5rem",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "0.85rem",
-              }}
-            >
-              <span>Subtopics:</span>
+            <div className="mt-3 rounded-lg bg-slate-800/60 border border-slate-700 px-3 py-3 flex flex-wrap gap-2 items-center justify-center text-sm">
+              <span className="text-slate-300">Subtopics:</span>
               {subtags.map((st) => (
                 <button
                   key={st.fullPath}
                   onClick={() => {
                     if (st.isLeaf) {
-                      // Leaf: filter within current topic
                       setActiveTagFilter(st.fullPath);
                     } else {
-                      // Parent: jump to its topic page
-                      navigate(
-                        `/topic/${encodeURIComponent(st.fullPath)}`
-                      );
+                      navigate(`/topic/${encodeURIComponent(st.fullPath)}`);
                     }
                   }}
-                  style={{
-                    padding: "0.3rem 0.7rem",
-                    borderRadius: "999px",
-                    border: "none",
-                    cursor: "pointer",
-                    fontWeight: 600,
-                    fontSize: "0.8rem",
-                    background: st.isLeaf ? "#ffffff" : "#ffd54f",
-                    color: "#001f62",
-                    boxShadow: "0 3px 8px rgba(0,0,0,0.35)",
-                  }}
+                  className={
+                    `px-3 py-1 rounded-full font-semibold shadow-sm transition ` +
+                    (st.isLeaf
+                      ? 'bg-white text-[#001f62] hover:bg-slate-50'
+                      : 'bg-amber-300 text-slate-900 hover:bg-amber-200')
+                  }
                 >
                   {st.label}
-                  {st.isLeaf ? "" : " ›"}
+                  {!st.isLeaf && <span> ›</span>}
                 </button>
               ))}
             </div>
           )}
 
           {activeTagFilter && activeTagFilter !== topic && (
-            <div
-              style={{
-                marginTop: "0.7rem",
-                padding: "0.5rem 0.75rem",
-                borderRadius: "10px",
-                background: "#132b82",
-                textAlign: "center",
-                fontSize: "0.85rem",
-              }}
-            >
-              Filtering by: <strong>{activeTagFilter}</strong>
+            <div className="mt-3 rounded-lg bg-slate-800/60 border border-slate-700 px-3 py-2 text-center text-sm">
+              Filtering by: <strong className="text-white">{activeTagFilter}</strong>
               <button
                 type="button"
                 onClick={() => setActiveTagFilter(null)}
-                style={{
-                  marginLeft: "0.5rem",
-                  padding: "0.2rem 0.6rem",
-                  borderRadius: "6px",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: "0.8rem",
-                }}
+                className="ml-2 inline-flex items-center rounded-md bg-white/90 px-2 py-1 text-xs font-semibold text-[#001f62] shadow-sm ring-1 ring-slate-300 hover:bg-white"
               >
                 Clear
               </button>
@@ -476,37 +399,26 @@ export default function TopicPage({ topic }) {
           )}
         </div>
 
-        {/* POSTS LIST */}
-        <div style={{ width: "min(800px, 92vw)", marginTop: "2rem" }}>
-          <h2 style={{ textAlign: "center" }}>Posts</h2>
+        {/* Posts list */}
+        <div className="mt-8">
+          <h2 className="text-2xl font-bold text-white text-center">Posts</h2>
 
           {filtered.length === 0 ? (
-            <p style={{ textAlign: "center" }}>No posts yet.</p>
+            <p className="mt-3 text-center text-slate-300">No posts yet.</p>
           ) : (
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                justifyContent: "center",
-                gap: "1rem",
-              }}
-            >
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
               {filtered.map((p) => {
-                const rawTitle = p.title || "Untitled";
-                const displayTitle =
-                  rawTitle.length > 40
-                    ? rawTitle.slice(0, 37) + "..."
-                    : rawTitle;
-
+                const rawTitle = p.title || 'Untitled';
+                const displayTitle = rawTitle.length > 40 ? rawTitle.slice(0, 37) + '...' : rawTitle;
                 return (
                   <button
                     key={p.postID}
-                    style={postButtonStyle}
                     onClick={() => {
                       setSelectedPost(p);
                       setPostModalOpen(true);
                     }}
                     title={rawTitle}
+                    className="w-full rounded-xl bg-white/95 text-[#001f62] font-semibold px-5 py-4 shadow-lg ring-1 ring-slate-200 hover:bg-white transition text-left"
                   >
                     {displayTitle}
                   </button>
@@ -516,206 +428,103 @@ export default function TopicPage({ topic }) {
           )}
         </div>
 
-        {/* NEW POST BUTTON */}
-        <button
-          onClick={() => {
-            if (!isAuthenticated) {
-              setNotice("You must log in to make a post.");
-              setTimeout(() => setNotice(null), 3000);
-              return;
-            }
-            setOpen(true);
-          }}
-          style={{
-            marginTop: "3rem",
-            padding: "1rem 2rem",
-            background: "#fff",
-            color: "#001f62",
-            borderRadius: "10px",
-            border: "none",
-            cursor: "pointer",
-            fontWeight: 700,
-            boxShadow: "0 5px 14px rgba(0,0,0,0.35)",
-          }}
-        >
-          Make a Post
-        </button>
-      </main>
+        {/* New post button */}
+        <div className="mt-8 flex justify-center">
+          <button
+            onClick={() => {
+              if (!isAuthenticated) {
+                setNotice('You must log in to make a post.');
+                setTimeout(() => setNotice(null), 3000);
+                return;
+              }
+              setOpen(true);
+            }}
+            className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-5 py-3 text-base font-semibold text-white shadow-sm shadow-emerald-500/30 ring-1 ring-inset ring-emerald-400 hover:bg-emerald-600 transition"
+          >
+            Make a Post
+          </button>
+        </div>
+      </section>
 
-      {/* POST VIEW MODAL */}
+      {/* Post view modal */}
       {postModalOpen && selectedPost && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.6)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 20,
-          }}
+          className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center px-4"
           onClick={() => setPostModalOpen(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{
-              width: "min(850px, 92vw)",
-              background: "#0b2a88",
-              padding: "2rem",
-              borderRadius: "12px",
-              maxHeight: "80vh",
-              overflowY: "auto",
-              color: "#fff",
-            }}
+            className="w-full max-w-3xl rounded-2xl border border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 p-6 shadow-xl text-slate-100 max-h-[80vh] overflow-y-auto"
           >
-            {/* Title + bookmark star */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "0.75rem",
-              }}
-            >
-              <h2
-                style={{
-                  margin: 0,
-                  fontSize: "1.5rem",
-                  fontWeight: 800,
-                  color: "#fff",
-                }}
-              >
-                {selectedPost.title || "Untitled"}
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="m-0 text-2xl font-extrabold text-white">
+                {selectedPost.title || 'Untitled'}
               </h2>
               <button
                 onClick={() => toggleBookmark(selectedPost)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: "1.8rem",
-                  color: isBookmarked(selectedPost.postID)
-                    ? "#ffd54f"
-                    : "#bbbbbb",
-                }}
+                className={`text-2xl transition ${isBookmarked(selectedPost.postID) ? 'text-amber-400' : 'text-slate-400 hover:text-slate-200'}`}
                 aria-label={
                   isBookmarked(selectedPost.postID)
-                    ? "Remove bookmark"
-                    : "Bookmark post"
+                    ? 'Remove bookmark'
+                    : 'Bookmark post'
                 }
               >
-                {isBookmarked(selectedPost.postID) ? "★" : "☆"}
+                {isBookmarked(selectedPost.postID) ? '★' : '☆'}
               </button>
             </div>
 
-            {/* Meta row */}
-            <div
-              style={{
-                fontSize: "0.9rem",
-                marginBottom: "0.75rem",
-                opacity: 0.9,
-              }}
-            >
-              by{" "}
-              <strong>{selectedPost.handle || "Unknown"}</strong>
+            <div className="text-sm mb-3 text-slate-300">
+              by <strong className="text-white">{selectedPost.handle || 'Unknown'}</strong>
               {selectedPost.created_at && (
                 <>
-                  {" "}
-                  ·{" "}
-                  {new Date(
-                    selectedPost.created_at
-                  ).toLocaleString()}
+                  {' '}·{' '}
+                  {new Date(selectedPost.created_at).toLocaleString()}
                 </>
               )}
             </div>
 
-            {/* Tags row */}
-            {Array.isArray(selectedPost.tags) &&
-              selectedPost.tags.length > 0 && (
-                <div
-                  style={{
-                    marginBottom: "0.75rem",
-                    fontSize: "0.85rem",
-                  }}
-                >
-                  <span style={{ marginRight: "0.4rem" }}>
-                    Tags:
-                  </span>
-                  {selectedPost.tags.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => handleTagClick(tag)}
-                      style={{
-                        display: "inline-block",
-                        marginRight: "0.4rem",
-                        marginBottom: "0.3rem",
-                        padding: "0.2rem 0.6rem",
-                        borderRadius: "999px",
-                        border: "none",
-                        cursor:
-                          tag && tag.trim() === topic
-                            ? "default"
-                            : "pointer",
-                        fontSize: "0.8rem",
-                        fontWeight: 600,
-                        background:
-                          tag && tag.trim() === topic
-                            ? "#bbbbbb"
-                            : "#ffffff",
-                        color: "#001f62",
-                      }}
-                      disabled={tag && tag.trim() === topic}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              )}
+            {Array.isArray(selectedPost.tags) && selectedPost.tags.length > 0 && (
+              <div className="mb-3 text-sm">
+                <span className="mr-2 text-slate-300">Tags:</span>
+                {selectedPost.tags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => handleTagClick(tag)}
+                    disabled={tag && tag.trim() === topic}
+                    className={`inline-block mr-2 mb-2 px-2 py-1 rounded-full text-xs font-semibold transition ${
+                      tag && tag.trim() === topic
+                        ? 'bg-slate-400 text-slate-800 cursor-default'
+                        : 'bg-white text-[#001f62] hover:bg-slate-50'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            )}
 
-            {/* Body */}
             <div
-              style={{
-                marginTop: "0.75rem",
-                lineHeight: 1.5,
-                color: "#fff",
-              }}
+              className="mt-3 leading-relaxed text-slate-100"
               dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(
-                  selectedPost.text || ""
-                ),
+                __html: DOMPurify.sanitize(selectedPost.text || ''),
               }}
             />
           </div>
         </div>
       )}
 
-      {/* CREATE POST MODAL */}
+      {/* Create post modal */}
       {open && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.45)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 25,
-          }}
+          className="fixed inset-0 z-50 bg-black/45 flex items-center justify-center px-4"
           onClick={() => (!busy ? setOpen(false) : null)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{
-              width: "min(680px, 92vw)",
-              background: "#0b2a88",
-              padding: "1.2rem",
-              borderRadius: 10,
-              boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
-              color: "#fff",
-            }}
+            className="w-full max-w-2xl rounded-2xl border border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 p-5 shadow-xl text-slate-100"
           >
-            <h3 style={{ marginTop: 0 }}>New post in {topic}</h3>
+            <h3 className="mt-0 text-xl font-semibold">New post in {topic}</h3>
 
             <form onSubmit={submitPost}>
               <input
@@ -723,23 +532,10 @@ export default function TopicPage({ topic }) {
                 placeholder="Title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: ".5rem",
-                  borderRadius: 6,
-                  border: "none",
-                  marginBottom: ".5rem",
-                }}
+                className="w-full rounded-md border border-slate-600 bg-white/95 text-slate-900 px-3 py-2 mb-2 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
 
-              <label
-                style={{
-                  display: "flex",
-                  gap: ".4rem",
-                  marginBottom: ".5rem",
-                  fontSize: "0.9rem",
-                }}
-              >
+              <label className="flex items-center gap-2 mb-2 text-sm">
                 <input
                   type="checkbox"
                   checked={postAnon}
@@ -748,73 +544,36 @@ export default function TopicPage({ topic }) {
                 Post anonymously
               </label>
 
-              <div style={{ marginBottom: ".5rem", fontSize: "0.85rem" }}>
-                <div style={{ marginBottom: "0.25rem" }}>
-                  Extra tag (optional, full path like "CS/CS315/Lab1"):
-                </div>
+              <div className="mb-2 text-sm">
+                <div className="mb-1">Extra tag (optional, full path like "CS/CS315/Lab1"):</div>
                 <input
                   type="text"
                   value={customTag}
                   onChange={(e) => setCustomTag(e.target.value)}
                   placeholder='e.g., "CS/CS315/Lab1"'
-                  style={{
-                    width: "100%",
-                    padding: ".4rem",
-                    borderRadius: 6,
-                    border: "none",
-                  }}
+                  className="w-full rounded-md border border-slate-600 bg-white/95 text-slate-900 px-3 py-2 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
-              <div
-                style={{
-                  background: "#fff",
-                  borderRadius: 8,
-                  overflow: "hidden",
-                }}
-              >
-                <PostEditor
-                  value={editorContent}
-                  onChange={setEditorContent}
-                />
+              <div className="rounded-lg overflow-hidden bg-white">
+                <PostEditor value={editorContent} onChange={setEditorContent} />
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: ".5rem",
-                  marginTop: ".75rem",
-                }}
-              >
+              <div className="flex justify-end gap-2 mt-3">
                 <button
                   type="button"
                   disabled={busy}
                   onClick={() => setOpen(false)}
-                  style={{
-                    padding: ".4rem .8rem",
-                    borderRadius: 6,
-                    border: "none",
-                    cursor: "pointer",
-                  }}
+                  className="inline-flex items-center rounded-md bg-white/90 px-3 py-2 text-sm font-semibold text-[#001f62] shadow-sm ring-1 ring-slate-300 hover:bg-white transition disabled:opacity-60"
                 >
                   Cancel
                 </button>
-
                 <button
                   type="submit"
                   disabled={busy}
-                  style={{
-                    padding: ".4rem .9rem",
-                    borderRadius: 6,
-                    border: "none",
-                    background: "#4caf50",
-                    color: "#fff",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
+                  className="inline-flex items-center rounded-md bg-emerald-500 px-3 py-2 text-sm font-semibold text-white shadow-sm ring-1 ring-emerald-400 hover:bg-emerald-600 transition disabled:opacity-60"
                 >
-                  {busy ? "Posting…" : "Post"}
+                  {busy ? 'Posting…' : 'Post'}
                 </button>
               </div>
             </form>
@@ -822,55 +581,25 @@ export default function TopicPage({ topic }) {
         </div>
       )}
 
-      {/* Guest Notice */}
+      {/* Guest notice */}
       {notice && (
-        <div
-          style={{
-            position: "fixed",
-            left: 0,
-            right: 0,
-            bottom: "1rem",
-            textAlign: "center",
-            zIndex: 30,
-          }}
-        >
-          <div
-            style={{
-              display: "inline-block",
-              background: "#fffbe6",
-              color: "#3a2a00",
-              border: "1px solid #e6d894",
-              padding: ".6rem 1rem",
-              borderRadius: 8,
-              boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
-            }}
-          >
+        <div className="fixed inset-x-0 bottom-4 z-50 text-center">
+          <div className="inline-block bg-white text-slate-900 border border-slate-200 px-4 py-2 rounded-lg shadow-lg">
             {notice}
           </div>
         </div>
       )}
 
       {/* Footer Banner */}
-      <footer
-        style={{
-          marginTop: "auto",
-          width: "100%",
-          display: "flex",
-          justifyContent: "center",
-          padding: "2rem 0",
-        }}
-      >
-        <img
-          src="/UICBanner.svg"
-          alt="UIC Banner"
-          style={{
-            height: "150px",
-            maxWidth: "95%",
-            width: "auto",
-            objectFit: "contain",
-          }}
-        />
+      <footer className="mt-12 border-t border-slate-800">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 text-center">
+          <img
+            src="/UICBanner.svg"
+            alt="UIC Banner"
+            className="mx-auto h-24 w-auto object-contain opacity-90"
+          />
+        </div>
       </footer>
-    </div>
+    </main>
   );
 }

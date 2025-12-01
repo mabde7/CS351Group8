@@ -2,16 +2,10 @@ import React, { useEffect } from 'react';
 import HeaderBar from '../components/HeaderBar';
 
 export default function TopicBrowse() {
+  // Remove previous body style side-effects; keep margin reset if needed
   useEffect(() => {
     document.body.style.margin = '0';
-    document.body.style.background = '#001f62';
-    document.body.style.fontFamily =
-      'system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", Helvetica, Arial, sans-serif';
-    return () => {
-      document.body.style.background = '';
-      document.body.style.margin = '';
-      document.body.style.fontFamily = '';
-    };
+    return () => { document.body.style.margin = ''; };
   }, []);
 
   const navigate = (to) => {
@@ -24,135 +18,66 @@ export default function TopicBrowse() {
     'General', 'Events', 'Math', 'CS', 'Biology', 'Chem', 'English', 'History', 'Philosophy', 'Career'
   ];
 
-  const topicBtn = {
-    padding: '1rem',
-    width: '100%',
-    borderRadius: '10px',
-    border: 'none',
-    background: '#ffffff',
-    color: '#001f62',
-    fontWeight: 700,
-    fontSize: '1.05rem',
-    cursor: 'pointer',
-    boxShadow: '0 5px 14px rgba(0,0,0,0.35)',
-  };
-
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        margin: 0,
-        padding: 0,
-        background: '#001f62',
-        color: '#fff',
-        border: '3px solid red',
-        boxSizing: 'border-box',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-      }}
-    >
-      <HeaderBar title="Browse Topics" />
+    <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white flex flex-col">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-slate-900/60 bg-slate-900/80 border-b border-slate-800">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <HeaderBar title="Browse Topics" />
+        </div>
+      </div>
 
-      <section style={{ maxWidth: 900, textAlign: 'center', marginTop: '2.2rem', padding: '0 1rem' }}>
-        <h2 style={{ margin: 0, fontSize: '2.1rem', fontWeight: 800 }}>Pick a Topic</h2>
-        <p style={{ marginTop: '0.75rem', fontSize: '1.02rem', lineHeight: 1.5, opacity: 0.95 }}>
-          Choose a subject area to view existing posts or create new ones.
-        </p>
+      {/* Hero Section */}
+      <section className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 pt-10 text-center">
+        <div className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/60 px-3 py-1 text-xs text-slate-300">
+          <span className="h-2 w-2 rounded-full bg-sky-400" />
+          <span className="font-medium">Choose a subject to explore posts</span>
+        </div>
+        <h2 className="mt-6 text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl text-white">Pick a Topic</h2>
+        <p className="mt-3 text-base sm:text-lg text-slate-300 max-w-xl mx-auto">Select a topic to view existing posts or create new ones that contribute to the UIC Wiki.</p>
       </section>
 
-      {/* Topic grid */}
-      <section
-        style={{
-          maxWidth: 1100,
-          width: '100%',
-          marginTop: '2.8rem',
-          padding: '0 1rem',
-          paddingBottom: '8rem',
-          boxSizing: 'border-box',
-        }}
-      >
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '1.25rem',
-          }}
-        >
+      {/* Topics Grid */}
+      <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 mt-10 pb-24">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
           {topics.map(tag => (
             <button
               key={tag}
-              style={topicBtn}
               onClick={() => navigate(`/topic/${encodeURIComponent(tag)}`)}
               title={`Open ${tag}`}
+              className="group relative w-full rounded-xl bg-white/95 text-[#001f62] font-semibold px-5 py-4 shadow-lg ring-1 ring-slate-200 hover:bg-white transition flex items-center justify-between overflow-hidden"
             >
-              {tag}
+              <span className="truncate">{tag}</span>
+              <span className="ml-3 inline-block rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700 group-hover:bg-emerald-100 group-hover:text-emerald-700 transition">Open</span>
+              <span className="pointer-events-none absolute inset-0 rounded-xl ring-0 group-hover:ring-2 group-hover:ring-emerald-400/60 transition" />
             </button>
           ))}
         </div>
       </section>
 
-      {/* Floating buttons */}
-      <button
-        onClick={() => navigate('/mainmenu')}
-        style={{
-          position: 'fixed',
-          left: '1rem',
-          bottom: '1rem',
-          padding: '1rem 1.6rem',
-          borderRadius: '12px',
-          border: 'none',
-          background: '#ffffff',
-          color: '#001f62',
-          fontWeight: 700,
-          fontSize: '1rem',
-          cursor: 'pointer',
-          boxShadow: '0 5px 14px rgba(0,0,0,0.35)',
-        }}
-      >
-        ← Main Menu
-      </button>
+      {/* Floating Nav Buttons */}
+      <div className="fixed left-4 bottom-4 flex flex-col gap-3">
+        <button
+          onClick={() => navigate('/mainmenu')}
+          className="inline-flex items-center rounded-lg bg-white px-4 py-2 text-sm font-semibold text-[#001f62] shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 transition"
+        >
+          ← Main Menu
+        </button>
+      </div>
+      <div className="fixed right-4 bottom-4 flex flex-col gap-3">
+        <button
+          onClick={() => navigate('/')}
+          className="inline-flex items-center rounded-lg bg-white px-4 py-2 text-sm font-semibold text-[#001f62] shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 transition"
+        >
+          Home
+        </button>
+      </div>
 
-      <button
-        onClick={() => navigate('/')}
-        style={{
-          position: 'fixed',
-          right: '1rem',
-          bottom: '1rem',
-          padding: '1rem 1.6rem',
-          borderRadius: '12px',
-          border: 'none',
-          background: '#ffffff',
-          color: '#001f62',
-          fontWeight: 700,
-          fontSize: '1rem',
-          cursor: 'pointer',
-          boxShadow: '0 5px 14px rgba(0,0,0,0.35)',
-        }}
-      >
-        Home
-      </button>
-
-      {/* 🔵 Footer Banner */}
-      <footer
-        style={{
-          marginTop: 'auto',
-          width: '100%',
-          display: 'flex',
-          justifyContent: 'center',
-          padding: '2rem 0',
-        }}
-      >
-        <img
-          src="/UICBanner.svg"
-          alt="UIC Banner"
-          style={{
-            height: '150px',
-            maxWidth: '95%',
-            width: 'auto',
-            objectFit: 'contain',
-          }}
-        />
+      {/* Footer Banner */}
+      <footer className="mt-auto border-t border-slate-800">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-center">
+          <img src="/UICBanner.svg" alt="UIC Banner" className="mx-auto h-24 w-auto object-contain opacity-90" />
+        </div>
       </footer>
     </main>
   );
