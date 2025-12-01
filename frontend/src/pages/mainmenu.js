@@ -1,5 +1,11 @@
 // frontend/src/pages/mainmenu.js
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { getOrCreateUserKey } from "../utils/userKey";
 import HeaderBar from "../components/HeaderBar";
@@ -12,6 +18,12 @@ export default function MainMenu() {
   const [handle, setHandle] = useState("User");
   const [recent, setRecent] = useState([]);
   const [userKey, setUserKey] = useState(null);
+  const userKeyRef = useRef(null); // tracks the *current* user key for fetches
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    userKeyRef.current = userKey;
+  }, [userKey]);
 
   // Build persistent user key
   useEffect(() => {
@@ -61,21 +73,33 @@ export default function MainMenu() {
     })();
   }, [getIdTokenClaims, user]);
 
-  // Fetch recent topics
+  // Fetch recent topics (ignore responses for stale userKeys)
   const fetchRecent = useCallback(async (ukey) => {
     if (!ukey) return;
+
+    const requestedKey = ukey;
+
     try {
       const res = await fetch(
-        `${API_BASE}/recent-topics?user=${encodeURIComponent(ukey)}`
+        `${API_BASE}/recent-topics?user=${encodeURIComponent(requestedKey)}`
       );
       const data = await res.json();
+
+      // If userKey changed since this request was sent (e.g. guest -> auth),
+      // ignore this response so it doesn't clobber the real recents.
+      if (userKeyRef.current !== requestedKey) {
+        return;
+      }
+
       if (data?.ok && Array.isArray(data.topics)) {
         setRecent(data.topics);
       } else {
         setRecent([]);
       }
     } catch {
-      setRecent([]);
+      if (userKeyRef.current === requestedKey) {
+        setRecent([]);
+      }
     }
   }, []);
 
@@ -169,7 +193,6 @@ export default function MainMenu() {
             Browse Topics
           </button>
 
-          {/* NEW: User Page button (only when logged in) */}
           {isAuthenticated && (
             <button
               onClick={() => navigate("/userpage")}

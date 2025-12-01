@@ -16,79 +16,48 @@ def register_user():
 
 def auto_register_user():
     """
-    Ensures the current Auth0 user exists in the database.
-    - Creates the user row if missing.
-    - Keeps handle/email up to date.
-    - Auto-backfills created_posts from the posts table so old posts are captured.
-    Returns the full user row.
+    Ensure the current Auth0 user exists in the `users` table and that the
+    JSON fields are always valid ('[]' for created_posts/bookmarks/recent_history).
+
+    Returns the full row (never None if things succeed).
     """
-    user = current_user()
+    user = current_user() or {}
     sub = user.get("sub")
-    handle = user.get(HANDLE_CLAIM)
-    email = user.get("email")
+    handle = (
+        user.get(HANDLE_CLAIM)
+        or user.get("nickname")
+        or user.get("username")
+        or (user.get("email") or "").split("@")[0]
+        or "User"
+    )
+    email = user.get("email") or ""
+
+    if not sub:
+        # Something is badly wrong with the token; let caller handle it
+        return None
 
     db = get_db()
-    row = db.execute("SELECT * FROM users WHERE sub = ?", (sub,)).fetchone()
 
-    if row is None:
-        # Create new user with empty JSON lists
-        db.execute(
-            """
-            INSERT INTO users (sub, handle, email, created_posts, bookmarks, recent_history)
-            VALUES (?, ?, ?, '[]', '[]', '[]')
-            """,
-            (sub, handle, email),
-        )
-        db.commit()
-        row = db.execute("SELECT * FROM users WHERE sub = ?", (sub,)).fetchone()
-    else:
-        # Update handle/email in case user changed it in Auth0
-        db.execute(
-            """
-            UPDATE users
-            SET handle = ?, email = ?
-            WHERE sub = ?
-            """,
-            (handle, email, sub),
-        )
-        db.commit()
-        row = db.execute("SELECT * FROM users WHERE sub = ?", (sub,)).fetchone()
-
-    # --- Auto-backfill created_posts from posts table for this user ---
-    # Current JSON list from users table
-    current_created = json.loads(row["created_posts"] or "[]")
-
-    # Actual posts this user has authored
-    post_rows = db.execute(
+    # Single upsert: create the row if missing, update handle/email if it exists,
+    # and make sure our JSON-ish text fields are never NULL.
+    db.execute(
         """
-        SELECT postID
-        FROM posts
-        WHERE author_sub = ?
-        ORDER BY created_at ASC
+        INSERT INTO users (sub, handle, email, created_posts, bookmarks, recent_history)
+        VALUES (?, ?, ?, '[]', '[]', '[]')
+        ON CONFLICT(sub) DO UPDATE
+        SET handle = EXCLUDED.handle,
+            email  = EXCLUDED.email,
+            created_posts   = COALESCE(users.created_posts, '[]'),
+            bookmarks       = COALESCE(users.bookmarks, '[]'),
+            recent_history  = COALESCE(users.recent_history, '[]')
         """,
-        (sub,),
-    ).fetchall()
-    actual_ids = [pr["postID"] for pr in post_rows]
+        (sub, handle, email),
+    )
+    db.commit()
 
-    # If they differ (or user had empty list), sync them
-    if current_created != actual_ids:
-        db.execute(
-            "UPDATE users SET created_posts = ? WHERE sub = ?",
-            (json.dumps(actual_ids), sub),
-        )
-        db.commit()
-        row = db.execute("SELECT * FROM users WHERE sub = ?", (sub,)).fetchone()
-
-    # Also normalize bookmarks to a valid JSON array if somehow NULL/empty
-    if not row["bookmarks"]:
-        db.execute(
-            "UPDATE users SET bookmarks = '[]' WHERE sub = ?",
-            (sub,),
-        )
-        db.commit()
-        row = db.execute("SELECT * FROM users WHERE sub = ?", (sub,)).fetchone()
-
+    row = db.execute("SELECT * FROM users WHERE sub = ?", (sub,)).fetchone()
     return row
+
 
 
 @users_bp.get("/me")
@@ -96,6 +65,8 @@ def auto_register_user():
 def me():
     """Always auto-create the user entry on login and backfill created_posts."""
     row = auto_register_user()
+    if row is None:
+        return jsonify({"error": "User not found / could not be registered"}), 500
     return jsonify(dict(row))
 
 
@@ -109,10 +80,18 @@ def _fetch_posts_for_ids(db, ids):
     placeholders = ",".join("?" * len(ids))
     rows = db.execute(
         f"""
-        SELECT p.*, u.handle
+        SELECT
+            p.postid      AS "postID",
+            p.author_sub,
+            p.title,
+            p.text,
+            p.links,
+            p.images,
+            p.created_at,
+            u.handle
         FROM posts p
         JOIN users u ON p.author_sub = u.sub
-        WHERE p.postID IN ({placeholders})
+        WHERE p.postid IN ({placeholders})
         ORDER BY p.created_at DESC
         """,
         ids,
@@ -121,10 +100,11 @@ def _fetch_posts_for_ids(db, ids):
     posts = [dict(r) for r in rows]
 
     for p in posts:
-        p["links"] = json.loads(p["links"])
-        p["images"] = json.loads(p["images"])
+        p["links"] = json.loads(p.get("links") or "[]")
+        p["images"] = json.loads(p.get("images") or "[]")
+
         trows = db.execute(
-            "SELECT tag FROM post_tags WHERE postID = ? ORDER BY tag ASC",
+            "SELECT tag FROM post_tags WHERE postid = ? ORDER BY tag ASC",
             (p["postID"],),
         ).fetchall()
         p["tags"] = [tr["tag"] for tr in trows]

@@ -4,7 +4,8 @@ import time
 from typing import Dict
 import json
 from db import get_db
-from cuckoo_map import CuckooHashMap  # <- NEW: advanced hashing structure
+from cuckoo_map import CuckooHashMap  # advanced hashing structure
+# no circular import: do NOT import users here
 
 recent_bp = Blueprint("recent", __name__)
 
@@ -20,7 +21,6 @@ class _PerUserRecents:
     """
 
     def __init__(self):
-        # Advanced hashing: CuckooHashMap instead of SkipList
         self.map = CuckooHashMap()  # tag -> ts (time_ns)
 
     def put(self, tag: str):
@@ -28,17 +28,14 @@ class _PerUserRecents:
             return
 
         ts = time.time_ns()
-        # Insert or update timestamp for this tag
         self.map[tag] = ts
 
         # Trim to at most _RECENT_MAX entries
         while len(self.map) > _RECENT_MAX:
-            # find oldest by timestamp; n <= 11 so O(n) is fine
             oldest_tag, _ = min(self.map.items(), key=lambda kv: kv[1])
             del self.map[oldest_tag]
 
     def list(self):
-        # Return tags sorted by timestamp descending (most recent first)
         sorted_items = sorted(self.map.items(), key=lambda kv: kv[1], reverse=True)
         return [tag for tag, _ in sorted_items]
 
@@ -47,11 +44,47 @@ class _PerUserRecents:
 _USERS: Dict[str, _PerUserRecents] = {}
 
 
+def _hydrate_from_db(user_key: str, bucket: _PerUserRecents) -> None:
+    """
+    On first use for an Auth0 user, seed the in-memory recents
+    from the users.recent_history column if it exists.
+    """
+    # Only try for real Auth0 users; guests never hit the users table
+    if not user_key.startswith("auth0|"):
+        return
+
+    db = get_db()
+    row = db.execute(
+        "SELECT recent_history FROM users WHERE sub = ?",
+        (user_key,),
+    ).fetchone()
+
+    if not row:
+        return
+
+    raw = row["recent_history"]
+    if not raw:
+        return
+
+    try:
+        topics = json.loads(raw)
+    except json.JSONDecodeError:
+        return
+
+    # Assign decreasing timestamps so leftmost is "most recent"
+    base_ts = time.time_ns()
+    for idx, tag in enumerate(topics):
+        if not tag:
+            continue
+        bucket.map[tag] = base_ts - idx
+
+
 def _get_bucket(user_key: str) -> _PerUserRecents:
     bucket = _USERS.get(user_key)
     if bucket is None:
         bucket = _PerUserRecents()
         _USERS[user_key] = bucket
+        _hydrate_from_db(user_key, bucket)
     return bucket
 
 
@@ -87,11 +120,20 @@ def save_recents():
     bucket = _get_bucket(user_key)
     topics = bucket.list()
 
+    # Only persist for real logged-in users
+    if not user_key.startswith("auth0|"):
+        return jsonify({"ok": True, "saved": topics}), 200
+
     db = get_db()
     db.execute(
-        "UPDATE users SET recent_history = ? WHERE sub = ?",
-        (json.dumps(topics), user_key),
+        """
+        INSERT INTO users (sub, recent_history)
+        VALUES (?, ?)
+        ON CONFLICT(sub) DO UPDATE
+        SET recent_history = excluded.recent_history
+        """,
+        (user_key, json.dumps(topics)),
     )
     db.commit()
 
-    return jsonify({"ok": True, "saved": topics})
+    return jsonify({"ok": True, "saved": topics}), 200

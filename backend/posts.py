@@ -51,7 +51,7 @@ def create_post():
     user_row = auto_register_user()
     sub = user_row["sub"]
 
-    body = request.get_json(force=True) or {}
+    body = request.get_json(silent=True) or {}
 
     title = (body.get("title") or "Untitled").strip()
     text = (body.get("text") or "").strip()
@@ -70,15 +70,16 @@ def create_post():
 
     db = get_db()
 
-    # Insert post
-    cur = db.execute(
+    # INSERT for Postgres: use RETURNING to get the new postid
+    row = db.execute(
         """
         INSERT INTO posts (author_sub, title, text, links, images)
         VALUES (?, ?, ?, ?, ?)
+        RETURNING postid
         """,
         (sub, title, text, links, images),
-    )
-    post_id = cur.lastrowid
+    ).fetchone()
+    post_id = row["postid"]
 
     # Update user's created_posts list
     created = json.loads(user_row["created_posts"] or "[]")
@@ -92,11 +93,15 @@ def create_post():
     for tag in tags:
         # DB record of the full path
         db.execute(
-            "INSERT OR IGNORE INTO tags (tag) VALUES (?)",
+            "INSERT INTO tags (tag) VALUES (?) ON CONFLICT(tag) DO NOTHING",
             (tag,),
         )
         db.execute(
-            "INSERT OR IGNORE INTO post_tags (postID, tag) VALUES (?, ?)",
+            """
+            INSERT INTO post_tags (postID, tag)
+            VALUES (?, ?)
+            ON CONFLICT (postID, tag) DO NOTHING
+            """,
             (post_id, tag),
         )
         # Also record in trie (backend data structure requirement)
@@ -149,10 +154,18 @@ def list_posts():
         placeholders = ",".join("?" for _ in full_tags)
         rows = db.execute(
             f"""
-            SELECT p.*, u.handle
+            SELECT
+                p.postid      AS "postID",
+                p.author_sub,
+                p.title,
+                p.text,
+                p.links,
+                p.images,
+                p.created_at,
+                u.handle
             FROM posts p
-            JOIN users u ON p.author_sub = u.sub
-            JOIN post_tags pt ON pt.postID = p.postID
+            JOIN users u   ON p.author_sub = u.sub
+            JOIN post_tags pt ON pt.postID = p.postid
             WHERE pt.tag IN ({placeholders})
             ORDER BY p.created_at DESC
             """,
@@ -161,7 +174,15 @@ def list_posts():
     else:
         rows = db.execute(
             """
-            SELECT p.*, u.handle
+            SELECT
+                p.postid      AS "postID",
+                p.author_sub,
+                p.title,
+                p.text,
+                p.links,
+                p.images,
+                p.created_at,
+                u.handle
             FROM posts p
             JOIN users u ON p.author_sub = u.sub
             ORDER BY p.created_at DESC
@@ -179,7 +200,7 @@ def delete_post(post_id):
     Delete a post:
       - Only author may delete
       - Removes postID from user's created_posts and bookmarks
-      - post_tags rows should cascade or be removed manually
+      - post_tags rows are handled by FK ON DELETE CASCADE
     """
     user = current_user()
     sub = user.get("sub")
@@ -187,7 +208,7 @@ def delete_post(post_id):
     db = get_db()
 
     post = db.execute(
-        "SELECT author_sub FROM posts WHERE postID = ?",
+        "SELECT author_sub FROM posts WHERE postid = ?",
         (post_id,),
     ).fetchone()
 
@@ -225,7 +246,7 @@ def delete_post(post_id):
             )
 
     # Delete post
-    db.execute("DELETE FROM posts WHERE postID = ?", (post_id,))
+    db.execute("DELETE FROM posts WHERE postid = ?", (post_id,))
     db.commit()
 
     return jsonify({"deleted": post_id}), 200
@@ -262,10 +283,18 @@ def posts_by_ids():
 
     rows = db.execute(
         f"""
-        SELECT p.*, u.handle
+        SELECT
+            p.postid      AS "postID",
+            p.author_sub,
+            p.title,
+            p.text,
+            p.links,
+            p.images,
+            p.created_at,
+            u.handle
         FROM posts p
         JOIN users u ON p.author_sub = u.sub
-        WHERE p.postID IN ({placeholders})
+        WHERE p.postid IN ({placeholders})
         ORDER BY p.created_at DESC
         """,
         ids,
