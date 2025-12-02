@@ -150,3 +150,10 @@ This will open the app at:
 - Both must be running at the same time
 
 ---
+
+# 7. Demo Video
+
+A short demonstration of the project can be viewed here:
+https://drive.google.com/file/d/1UmNYm8MJTTdW862MLkyCaC3NNn9uUGuQ/view?usp=sharing
+
+---
