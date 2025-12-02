@@ -1,4 +1,3 @@
-# backend/bookmarks.py
 import json
 from flask import Blueprint, jsonify
 from db import get_db
@@ -9,16 +8,29 @@ bookmarks_bp = Blueprint("bookmarks", __name__)
 
 
 def _fetch_posts_for_ids(db, ids):
+    """
+    Given a list of postIDs, return full post objects with handle + tags.
+    Works with the Postgres schema:
+      posts(postid, author_sub, title, text, links, images, created_at)
+    """
     if not ids:
         return []
 
     placeholders = ",".join("?" for _ in ids)
     rows = db.execute(
         f"""
-        SELECT p.*, u.handle
+        SELECT
+            p.postid      AS "postID",
+            p.author_sub,
+            p.title,
+            p.text,
+            p.links,
+            p.images,
+            p.created_at,
+            u.handle
         FROM posts p
         JOIN users u ON p.author_sub = u.sub
-        WHERE p.postID IN ({placeholders})
+        WHERE p.postid IN ({placeholders})
         ORDER BY p.created_at DESC
         """,
         ids,
@@ -27,10 +39,12 @@ def _fetch_posts_for_ids(db, ids):
     posts = [dict(r) for r in rows]
 
     for p in posts:
+        # links/images are stored as JSON in TEXT columns
         p["links"] = json.loads(p.get("links") or "[]")
         p["images"] = json.loads(p.get("images") or "[]")
+
         trows = db.execute(
-            "SELECT tag FROM post_tags WHERE postID = ? ORDER BY tag ASC",
+            "SELECT tag FROM post_tags WHERE postid = ? ORDER BY tag ASC",
             (p["postID"],),
         ).fetchall()
         p["tags"] = [tr["tag"] for tr in trows]
@@ -44,12 +58,9 @@ def list_bookmarks():
     """
     Return the current user's bookmarks:
 
-    {
-      "ids": [1,2,3],
-      "posts": [ {post}, ... ]
-    }
+      { "ids": [1,2,3], "posts": [ {post}, ... ] }
     """
-    row = auto_register_user()
+    row = auto_register_user()  # guarantees row exists + JSON fields initialized
     db = get_db()
 
     bookmark_ids = json.loads(row["bookmarks"] or "[]")
@@ -70,7 +81,7 @@ def add_bookmark(post_id):
 
     # ensure post exists
     exists = db.execute(
-        "SELECT 1 FROM posts WHERE postID = ?",
+        "SELECT 1 FROM posts WHERE postid = ?",
         (post_id,),
     ).fetchone()
     if not exists:

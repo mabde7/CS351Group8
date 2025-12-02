@@ -3,7 +3,7 @@
 -- ========================================
 CREATE TABLE IF NOT EXISTS users (
   sub             TEXT PRIMARY KEY,         -- Auth0 stable ID
-  handle          TEXT NOT NULL,            -- display username
+  handle          TEXT,                     -- display username
   email           TEXT,                     -- optional
   bookmarks       TEXT DEFAULT '[]',        -- JSON list of bookmarked postIDs
   recent_history  TEXT DEFAULT '[]',        -- JSON list of recent topics
@@ -14,9 +14,9 @@ CREATE TABLE IF NOT EXISTS users (
 -- POSTS TABLE
 -- ========================================
 CREATE TABLE IF NOT EXISTS posts (
-  postID          INTEGER PRIMARY KEY AUTOINCREMENT,
+  postID          SERIAL PRIMARY KEY,       -- Postgres auto-increment
   author_sub      TEXT NOT NULL,            -- references users.sub
-  title           TEXT NOT NULL,            -- NEW FIELD
+  title           TEXT NOT NULL,
   text            TEXT NOT NULL,            -- HTML content
   links           TEXT DEFAULT '[]',        -- JSON
   images          TEXT DEFAULT '[]',        -- JSON

@@ -15,12 +15,8 @@
     "react-dom": "^18.2.0",
     "react-quill": "^2.0.0",
     "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4",
-    "dompurify": "^3.3.0",
-    "quill": "^2.0.3",
-    "react-quill": "^2.0.0"
-  
-},
+    "web-vitals": "^2.1.4"
+  },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
@@ -48,6 +44,6 @@
   "devDependencies": {
     "autoprefixer": "^10.4.22",
     "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.17"
+    "tailwindcss": "^3.4.18"
   }
 }

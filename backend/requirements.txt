@@ -3,4 +3,4 @@ flask-cors
 python-dotenv
 requests
 python-jose[cryptography]
-
+psycopg2-binary
